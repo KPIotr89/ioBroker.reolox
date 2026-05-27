@@ -783,38 +783,39 @@ class ReoLoxAdapter extends utils.Adapter {
             }
         } else if (msg.command === 'getLoxoneVIs') {
             // Build a per-camera list of Virtual Input names the user should create
-            // in Loxone Config. Honours the configured prefix and per-camera flags
-            // (isDoorbell, whiteLedGateTrigger, loxoneIntercomEnabled).
+            // in Loxone Config. Returns an array of rows for the admin UI table.
             const prefix = String(this.config.loxoneViPrefix || 'ReoLox').replace(/[^a-zA-Z0-9_-]/g, '') || 'ReoLox';
             const cams = Array.isArray(this.config.cameras) ? this.config.cameras : [];
-            const lines = [];
-            if (cams.length === 0) {
-                lines.push('No cameras configured yet — add them in the Cameras tab first.');
-            }
+            const rows = [];
+            const push = (cam, suffix, type, note) => {
+                const safe = String(cam.name || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+                rows.push({
+                    camera: cam.name || '',
+                    vi: `${prefix}_${safe}_${suffix}`,
+                    type,
+                    note: note || '',
+                });
+            };
             for (const cam of cams) {
                 if (!cam || !cam.enabled) continue;
-                const safe = String(cam.name || '').replace(/[^a-zA-Z0-9_-]/g, '_');
-                lines.push(`# ${cam.name}  (${cam.host || '?'})`);
-                lines.push(`${prefix}_${safe}_Motion             digital`);
-                lines.push(`${prefix}_${safe}_Online             digital`);
-                lines.push(`${prefix}_${safe}_whiteLed           digital`);
+                push(cam, 'Motion', 'digital', 'Motion detected');
+                push(cam, 'Online', 'digital', 'Camera reachable (1/0)');
+                push(cam, 'whiteLed', 'digital', 'WhiteLed state');
                 if (cam.isDoorbell) {
-                    lines.push(`${prefix}_${safe}_Visitor            digital  (1s pulse on ring)`);
-                    lines.push(`${prefix}_${safe}_doorbellRing       digital`);
+                    push(cam, 'Visitor', 'digital', '1 s pulse on doorbell ring');
+                    push(cam, 'doorbellRing', 'digital', 'Doorbell button state');
                 }
-                lines.push(`${prefix}_${safe}_AI_person          digital`);
-                lines.push(`${prefix}_${safe}_AI_vehicle         digital`);
-                lines.push(`${prefix}_${safe}_AI_animal          digital`);
+                push(cam, 'AI_person', 'digital', 'AI person detected');
+                push(cam, 'AI_vehicle', 'digital', 'AI vehicle detected');
+                push(cam, 'AI_animal', 'digital', 'AI animal detected');
                 if (cam.whiteLedGateTrigger) {
-                    lines.push(`${prefix}_${safe}_gate_trigger       digital  (1s pulse on knock pattern)`);
+                    push(cam, 'gate_trigger', 'digital', '1 s pulse on knock pattern');
                 }
                 if (this.config.loxoneIntercomEnabled) {
-                    lines.push(`${prefix}_${safe}_intercom           text     (RTSP URL on ring)`);
+                    push(cam, 'intercom', 'text', 'RTSP URL string on ring');
                 }
-                lines.push('');
             }
-            const result = lines.join('\n');
-            this.sendTo(msg.from, msg.command, { result, error: null }, msg.callback);
+            this.sendTo(msg.from, msg.command, { result: rows, native: { loxoneVIList: rows }, error: null }, msg.callback);
         }
     }
 
