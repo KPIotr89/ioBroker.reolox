@@ -92,6 +92,14 @@
                             "default": false,
                             "width": "55px",
                             "tooltip": "Brief WhiteLed flash (≤3 s ON→OFF) from the Reolink app triggers a gate_trigger event to Loxone. Camera user must have Admin role."
+                        },
+                        {
+                            "type": "checkbox",
+                            "attr": "isDoorbell",
+                            "label": "Doorbell",
+                            "default": false,
+                            "width": "70px",
+                            "tooltip": "Mark this camera as a doorbell. Forces visitor/doorbell capability on (some firmware misreports GetDoorbell). Visitor events arrive via webhook push and are sent to <prefix>_<cam>_Visitor as a 1 s pulse."
                         }
                     ],
                     "default": []

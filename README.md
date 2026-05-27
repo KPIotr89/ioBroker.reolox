@@ -202,6 +202,7 @@ Add a row per camera. Fields:
 | **TLS** | Use HTTPS (self-signed certs accepted) |
 | **Poll s** | Status polling interval. Default 5 s. Per-camera override of the *Default poll interval* below |
 | **Gate** | Enable fast-poll WhiteLed knock-pattern gate trigger for this camera (see [Gate trigger](#gate-trigger)) |
+| **Doorbell** | Mark this camera as a doorbell. Forces `caps.visitor + caps.doorbell = true` even when firmware misreports `GetDoorbell`. Visitor events arrive via webhook push and pulse `<prefix>_<cam>_Visitor` for 1 s |
 
 Two helpers under the table:
 

@@ -186,7 +186,7 @@ class ReoLoxAdapter extends utils.Adapter {
             const info = devInfo && devInfo.DevInfo || {};
             this.log.info(`Camera "${camId}" connected: ${sanitize(info.model || 'Reolink')} ${sanitize(info.name || '')} FW=${sanitize(info.firmVer || '?')}`);
 
-            await this._detectCapabilities(camId, api);
+            await this._detectCapabilities(camId, api, camConfig);
             await this._createCameraObjects(camId, camConfig, info);
             await this._updateStreamUrls(camId, camConfig, api);
 
@@ -230,7 +230,7 @@ class ReoLoxAdapter extends utils.Adapter {
 
     // ─── CAPABILITY DETECTION ─────────────────────────────────────────────
 
-    async _detectCapabilities(camId, api) {
+    async _detectCapabilities(camId, api, camConfig) {
         const caps = {
             ptz: false, whiteLed: false, siren: false,
             aiDetection: false, visitor: false, doorbell: false,
@@ -275,9 +275,17 @@ class ReoLoxAdapter extends utils.Adapter {
             try { await api.getWhiteLed(); caps.whiteLed = true; } catch (_) { /* still false */ }
         }
 
-        // Confirm doorbell hardware by actually calling GetDoorbell.
-        try { await api.getDoorbell(); caps.doorbell = true; caps.visitor = true; }
-        catch (_) { caps.doorbell = false; }
+        // Confirm doorbell hardware. User can force this on via the `isDoorbell`
+        // checkbox — useful for firmwares that misreport GetDoorbell (e.g. Reolink
+        // Video Doorbell PoE v3.0.0.4662 returns -9 not supported).
+        if (camConfig && camConfig.isDoorbell) {
+            caps.doorbell = true;
+            caps.visitor = true;
+            this.log.info(`Camera "${camId}": marked as doorbell by user — webhook visitor events will be honored.`);
+        } else {
+            try { await api.getDoorbell(); caps.doorbell = true; caps.visitor = true; }
+            catch (_) { caps.doorbell = false; }
+        }
 
         // Always probe GetAiState — Reolink misreports aiTrack.ver on CX-series.
         // If any AI type is supported per-type, we'll discover that during polling
@@ -475,8 +483,9 @@ class ReoLoxAdapter extends utils.Adapter {
                 this.log.debug(`AI poll failed for ${camId}: ${sanitize(e.message)}`);
             }
 
-            // Doorbell (physical button press)
-            if (this._hasCapability(camId, 'doorbell')) {
+            // Doorbell (physical button press). Skipped entirely if the user
+            // marked the camera as doorbell explicitly (webhook handles it).
+            if (this._hasCapability(camId, 'doorbell') && !camConfig.isDoorbell) {
                 try {
                     const dbRes = await api.getDoorbell(ch);
                     const ringing = !!(dbRes && (dbRes.ring_state === 1 || (dbRes.Doorbell && dbRes.Doorbell.ring_state === 1)));
