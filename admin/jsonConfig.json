@@ -229,6 +229,27 @@
                     "hidden": "!data.loxoneEnabled",
                     "help": "When doorbell rings, send the RTSP stream URL to <Prefix>_<Camera>_intercom so the Loxone Touch panel can display the camera feed."
                 },
+                "_dividerVIs": { "type": "divider" },
+                "_generateVIs": {
+                    "type": "sendTo",
+                    "command": "getLoxoneVIs",
+                    "label": "📋 Generate VI list for my cameras",
+                    "showProcess": true,
+                    "useNative": true,
+                    "result": "loxoneVIList",
+                    "hidden": "!data.loxoneEnabled",
+                    "style": { "marginTop": "8px", "marginBottom": "8px" }
+                },
+                "loxoneVIList": {
+                    "type": "text",
+                    "label": "Loxone Virtual Inputs to create (read-only)",
+                    "minRows": 14,
+                    "maxRows": 30,
+                    "readOnly": true,
+                    "copyToClipboard": true,
+                    "hidden": "!data.loxoneEnabled",
+                    "help": "Click the button above to generate the list for your current cameras. Copy these exact names to Loxone Config (case-sensitive), then F6 to save in the Miniserver."
+                },
                 "_loxoneInfo": {
                     "type": "staticText",
                     "label": "",

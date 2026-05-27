@@ -103,7 +103,8 @@
         "snapshotOnMotion": false,
         "snapshotRetention": 24,
         "capabilityCacheTtlHours": 24,
-        "debugMode": false
+        "debugMode": false,
+        "loxoneVIList": ""
     },
     "objects": [],
     "instanceObjects": []

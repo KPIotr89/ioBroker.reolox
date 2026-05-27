@@ -781,6 +781,40 @@ class ReoLoxAdapter extends utils.Adapter {
             } catch (e) {
                 this.sendTo(msg.from, msg.command, { result: [], error: sanitize(e.message) }, msg.callback);
             }
+        } else if (msg.command === 'getLoxoneVIs') {
+            // Build a per-camera list of Virtual Input names the user should create
+            // in Loxone Config. Honours the configured prefix and per-camera flags
+            // (isDoorbell, whiteLedGateTrigger, loxoneIntercomEnabled).
+            const prefix = String(this.config.loxoneViPrefix || 'ReoLox').replace(/[^a-zA-Z0-9_-]/g, '') || 'ReoLox';
+            const cams = Array.isArray(this.config.cameras) ? this.config.cameras : [];
+            const lines = [];
+            if (cams.length === 0) {
+                lines.push('No cameras configured yet — add them in the Cameras tab first.');
+            }
+            for (const cam of cams) {
+                if (!cam || !cam.enabled) continue;
+                const safe = String(cam.name || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+                lines.push(`# ${cam.name}  (${cam.host || '?'})`);
+                lines.push(`${prefix}_${safe}_Motion             digital`);
+                lines.push(`${prefix}_${safe}_Online             digital`);
+                lines.push(`${prefix}_${safe}_whiteLed           digital`);
+                if (cam.isDoorbell) {
+                    lines.push(`${prefix}_${safe}_Visitor            digital  (1s pulse on ring)`);
+                    lines.push(`${prefix}_${safe}_doorbellRing       digital`);
+                }
+                lines.push(`${prefix}_${safe}_AI_person          digital`);
+                lines.push(`${prefix}_${safe}_AI_vehicle         digital`);
+                lines.push(`${prefix}_${safe}_AI_animal          digital`);
+                if (cam.whiteLedGateTrigger) {
+                    lines.push(`${prefix}_${safe}_gate_trigger       digital  (1s pulse on knock pattern)`);
+                }
+                if (this.config.loxoneIntercomEnabled) {
+                    lines.push(`${prefix}_${safe}_intercom           text     (RTSP URL on ring)`);
+                }
+                lines.push('');
+            }
+            const result = lines.join('\n');
+            this.sendTo(msg.from, msg.command, { result, error: null }, msg.callback);
         }
     }
 
