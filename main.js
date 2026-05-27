@@ -72,7 +72,7 @@ class ReoLoxAdapter extends utils.Adapter {
 
         // Capability cache (disk)
         try {
-            const dir = path.join(this.getDataDir(), 'cache');
+            const dir = path.join(utils.getAbsoluteInstanceDataDir(this), 'cache');
             const ttl = (this.config.capabilityCacheTtlHours || 24) * 60 * 60 * 1000;
             this.capabilityCache = new CapabilityCache({ dir, ttlMs: ttl, log: this.log });
         } catch (e) {
@@ -404,7 +404,7 @@ class ReoLoxAdapter extends utils.Adapter {
         await this.setStateAsync(`${camId}.streams.rtspMainPublic`, api.rtspUrlPublic(ch, 'main'), true);
         await this.setStateAsync(`${camId}.streams.rtspSubPublic`, api.rtspUrlPublic(ch, 'sub'), true);
         // Where snapshots land — no credentials in this string.
-        await this.setStateAsync(`${camId}.streams.snapshotProxy`, path.join(this.getDataDir(), 'snapshots', `${camId}.jpg`), true);
+        await this.setStateAsync(`${camId}.streams.snapshotProxy`, path.join(utils.getAbsoluteInstanceDataDir(this), 'snapshots', `${camId}.jpg`), true);
     }
 
     // ─── POLLING ──────────────────────────────────────────────────────────
@@ -762,7 +762,7 @@ class ReoLoxAdapter extends utils.Adapter {
     async _captureSnapshot(camId, api, channel) {
         try {
             const buffer = await api.getSnapshot(channel);
-            const snapshotDir = path.join(this.getDataDir(), 'snapshots');
+            const snapshotDir = path.join(utils.getAbsoluteInstanceDataDir(this), 'snapshots');
             if (!fs.existsSync(snapshotDir)) fs.mkdirSync(snapshotDir, { recursive: true });
             const filename = `${camId}.jpg`;
             const filepath = path.join(snapshotDir, filename);
