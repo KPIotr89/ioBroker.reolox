@@ -1,17 +1,17 @@
 {
     "common": {
-        "name": "reolink-loxone",
-        "version": "1.3.0",
-        "title": "Reolink Camera Integration for Loxone",
+        "name": "reolox",
+        "version": "2.0.0",
+        "title": "ReoLox",
         "titleLang": {
-            "en": "Reolink Camera Integration for Loxone",
-            "de": "Reolink Kamera-Integration für Loxone",
-            "pl": "Integracja kamer Reolink z Loxone"
+            "en": "ReoLox — Reolink ↔ Loxone bridge",
+            "de": "ReoLox — Reolink ↔ Loxone Brücke",
+            "pl": "ReoLox — most Reolink ↔ Loxone"
         },
         "desc": {
-            "en": "Full Reolink camera API integration with direct Loxone Miniserver bridge support. Motion detection, AI detection, PTZ, snapshots, streams, and more.",
-            "de": "Vollständige Reolink-Kamera-API-Integration mit direkter Loxone Miniserver Bridge-Unterstützung.",
-            "pl": "Pelna integracja API kamer Reolink z mostem do Loxone Miniserver. Detekcja ruchu, AI, PTZ, snapshoty, streamy i wiecej."
+            "en": "Reolink camera integration for ioBroker with direct Loxone Miniserver bridge. Motion / AI detection, doorbell push, PTZ, snapshots, RTSP via go2rtc, whiteLed knock gate trigger.",
+            "de": "Reolink-Kamera-Integration für ioBroker mit direkter Loxone-Miniserver-Brücke. Bewegungs- und KI-Erkennung, Türklingel-Push, PTZ, Schnappschüsse, RTSP über go2rtc.",
+            "pl": "Integracja kamer Reolink dla ioBroker z bezposrednim mostem do Loxone Miniserver. Detekcja ruchu i AI, push dzwonka, PTZ, snapshoty, RTSP przez go2rtc, gate trigger przez mrugniecie WhiteLed."
         },
         "authors": [
             "Piotr Kalbarczyk <kalbarczyk.piotr@gmail.com>"
@@ -19,21 +19,24 @@
         "keywords": [
             "reolink",
             "loxone",
+            "reolox",
             "camera",
             "surveillance",
             "CCTV",
             "PTZ",
             "motion",
             "AI",
+            "doorbell",
+            "go2rtc",
             "smart home"
         ],
         "license": "MIT",
         "platform": "Javascript/Node.js",
         "main": "main.js",
-        "icon": "reolink-loxone.svg",
+        "icon": "reolox.svg",
         "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/KPIotr89/ioBroker.reolink-loxone/main/admin/reolink-loxone.svg",
-        "readme": "https://github.com/KPIotr89/ioBroker.reolink-loxone/blob/main/README.md",
+        "extIcon": "https://raw.githubusercontent.com/KPIotr89/ioBroker.reolox/main/admin/reolox.svg",
+        "readme": "https://github.com/KPIotr89/ioBroker.reolox/blob/main/README.md",
         "loglevel": "info",
         "tier": 3,
         "mode": "daemon",
@@ -57,6 +60,15 @@
         "supportedMessages": {
             "stopInstance": true
         },
+        "encryptedNative": [
+            "loxonePassword",
+            "webhookSharedSecret"
+        ],
+        "protectedNative": [
+            "loxonePassword",
+            "webhookSharedSecret",
+            "cameras"
+        ],
         "plugins": {
             "sentry": {
                 "dsn": ""
@@ -64,49 +76,26 @@
         },
         "messagebox": true,
         "news": {
-            "1.2.0": {
-                "en": "Fix SetWhiteLed: read current config from camera, ledControl permission detection, WhiteLed state polling (detects changes from Reolink app)",
-                "de": "SetWhiteLed korrigiert: Konfiguration von Kamera lesen, ledControl-Berechtigungserkennung, WhiteLed-Status-Polling",
-                "pl": "Naprawa SetWhiteLed: odczyt konfiguracji z kamery, wykrywanie uprawnien ledControl, polling stanu WhiteLed"
-            },
-            "1.1.5": {
-                "en": "Fix ESLint no-unused-vars: use channel in getRtspUrl (also fixes RTSP URL for NVR multi-channel)",
-                "de": "ESLint no-unused-vars behoben: channel in getRtspUrl genutzt (auch RTSP-URL für NVR korrigiert)",
-                "pl": "Naprawa ESLint no-unused-vars: uzycie channel w getRtspUrl (poprawia tez URL RTSP dla NVR)"
-            },
-            "1.1.4": {
-                "en": "Fix SetWhiteLed: remove 'action' field from body to exactly match Loxone working format",
-                "de": "SetWhiteLed korrigiert: 'action'-Feld aus dem Body entfernt (exakt wie Loxone-Format)",
-                "pl": "Naprawa SetWhiteLed: usunieto pole 'action' z body (dokladnie jak format Loxone)"
-            },
-            "1.1.3": {
-                "en": "Fix SetWhiteLed URL: add channel as URL query param (matching Loxone format: /api.cgi?cmd=SetWhiteLed&channel=0&user=...)",
-                "de": "SetWhiteLed URL korrigiert: channel als URL-Parameter hinzugefügt",
-                "pl": "Naprawa URL SetWhiteLed: dodano channel jako parametr URL (zgodnie z formatem Loxone)"
-            },
-            "1.1.2": {
-                "en": "Fix ESLint errors: rewrite else-try to standard if/else, fix no-case-declarations in switch",
-                "de": "ESLint-Fehler behoben: else-try umgeschrieben, no-case-declarations im switch korrigiert",
-                "pl": "Naprawa bledow ESLint: przepisano else-try, poprawiono deklaracje w switch"
-            },
-            "1.1.1": {
-                "en": "Fix WhiteLed/Siren detection: default to enabled, catch errors gracefully at runtime instead of blocking via GetAbility",
-                "de": "WhiteLed/Sirene-Erkennung korrigiert: standardmäßig aktiviert, Fehler werden zur Laufzeit abgefangen",
-                "pl": "Naprawa wykrywania WhiteLed/Siren: domyslnie wlaczone, bledy obslugiwane w runtime zamiast blokady przez GetAbility"
-            },
-            "1.1.0": {
-                "en": "Capability detection (GetAbility): adapter auto-detects WhiteLed/PTZ/Siren support; fixed SetWhiteLed to use direct auth with full payload",
-                "de": "Fähigkeitserkennung (GetAbility): Adapter erkennt WhiteLed/PTZ/Sirene automatisch; SetWhiteLed mit direkter Authentifizierung korrigiert",
-                "pl": "Wykrywanie mozliwosci (GetAbility): adapter auto-wykrywa WhiteLed/PTZ/Siren; naprawiono SetWhiteLed z bezposrednim auth"
-            },
-            "1.0.0": {
-                "en": "Initial release - Full Reolink API support with Loxone bridge",
-                "de": "Erstveröffentlichung - Volle Reolink API-Unterstützung mit Loxone Bridge",
-                "pl": "Pierwsza wersja - Pelne wsparcie API Reolink z mostem Loxone"
+            "2.0.0": {
+                "en": "BREAKING — rebrand to ReoLox (iobroker.reolox). Loxone VI prefix changes from Reolink_* to ReoLox_*. Old instance must be removed before installing. Security hardening: encrypted passwords, webhook IP allowlist + shared secret + body limit, Loxone Token Auth (HMAC), credentials removed from public states. Stability: PollScheduler with jitter and singleflight login, tracked timers (clean shutdown), capability cache on disk, exponential backoff. New: snapshot endpoint without credentials, /reolox/{cam} webhook path, configurable VI prefix, unit tests.",
+                "de": "BREAKING — Rebranding zu ReoLox (iobroker.reolox). Loxone-VI-Präfix ändert sich von Reolink_* zu ReoLox_*. Alte Instanz muss entfernt werden. Sicherheits-Hardening, Stabilitäts-Verbesserungen, Unit-Tests.",
+                "pl": "BREAKING — rebranding na ReoLox (iobroker.reolox). Prefix VI w Loxone zmienia sie z Reolink_* na ReoLox_*. Stara instancja musi byc usunieta przed instalacja. Hardening bezpieczenstwa: szyfrowane hasla, webhook z allowlist IP + shared secret + body limit, Loxone Token Auth (HMAC), brak credentiali w publicznych stanach. Stabilnosc: PollScheduler z jitterem i singleflight login, tracked timery (czyste zamkniecie), cache capabilities na dysku, exponential backoff. Nowe: snapshot endpoint bez credentiali, sciezka webhooka /reolox/{cam}, konfigurowalny prefix VI, testy jednostkowe."
             },
             "1.3.0": {
                 "en": "WhiteLed knock-pattern gate trigger: brief flash (≤3s ON→OFF) detected via Reolink app sends gate_trigger event to Loxone",
                 "pl": "Wykrywanie mrugnięcia WhiteLed jako trigger bramy: krótki błysk (≤3s) z aplikacji Reolink wysyła zdarzenie gate_trigger do Loxone"
+            },
+            "1.2.0": {
+                "en": "Fix SetWhiteLed: read current config from camera, ledControl permission detection, WhiteLed state polling",
+                "pl": "Naprawa SetWhiteLed: odczyt konfiguracji z kamery, wykrywanie uprawnien ledControl, polling stanu WhiteLed"
+            },
+            "1.1.0": {
+                "en": "Capability detection (GetAbility): adapter auto-detects WhiteLed/PTZ/Siren support",
+                "pl": "Wykrywanie mozliwosci (GetAbility): adapter auto-wykrywa WhiteLed/PTZ/Siren"
+            },
+            "1.0.0": {
+                "en": "Initial release - Full Reolink API support with Loxone bridge",
+                "pl": "Pierwsza wersja - Pelne wsparcie API Reolink z mostem Loxone"
             }
         }
     },
@@ -119,9 +108,19 @@
         "loxoneUser": "",
         "loxonePassword": "",
         "loxoneMode": "http",
+        "loxoneAuth": "token",
         "loxoneUdpPort": 7000,
+        "loxoneViPrefix": "ReoLox",
+        "loxoneIntercomEnabled": false,
+        "webhookEnabled": false,
+        "webhookPort": 7777,
+        "webhookHost": "",
+        "webhookSharedSecret": "",
+        "webhookIpAllowlist": "auto",
+        "go2rtcUrl": "",
         "snapshotOnMotion": false,
         "snapshotRetention": 24,
+        "capabilityCacheTtlHours": 24,
         "debugMode": false
     },
     "objects": [],

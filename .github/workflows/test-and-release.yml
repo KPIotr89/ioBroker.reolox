@@ -2,10 +2,8 @@ name: Test and Release
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - v*
+    branches: [main]
+    tags: ['v*']
   pull_request: {}
 
 concurrency:
@@ -21,22 +19,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
       - run: npm ci
       - run: npm run lint
 
   unit-tests:
     if: contains(github.event.head_commit.message, '[skip ci]') == false
     needs: [lint]
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         node-version: [18, 20, 22]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: npm
       - run: npm ci
+      - run: npm run test:unit
       - run: npm run test:package
 
   release:
@@ -52,7 +55,8 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
+          cache: npm
       - run: npm ci
-      - run: npm publish
+      - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

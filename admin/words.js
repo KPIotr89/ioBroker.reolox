@@ -3,50 +3,13 @@
 /* global systemDictionary */
 'use strict';
 
+// ReoLox uses jsonConfig with "i18n":true — translations live in admin/i18n/<lang>/translations.json.
+// This file is kept for Admin v4/5 backwards compatibility and stays intentionally minimal.
+
 systemDictionary = {
-    'Cameras': {
-        'en': 'Cameras',
-        'de': 'Kameras',
-        'pl': 'Kamery',
-    },
-    'Camera List': {
-        'en': 'Camera List',
-        'de': 'Kameraliste',
-        'pl': 'Lista kamer',
-    },
-    'Camera Name': {
-        'en': 'Camera Name',
-        'de': 'Kameraname',
-        'pl': 'Nazwa kamery',
-    },
-    'IP Address / Hostname': {
-        'en': 'IP Address / Hostname',
-        'de': 'IP-Adresse / Hostname',
-        'pl': 'Adres IP / Nazwa hosta',
-    },
-    'Loxone': {
-        'en': 'Loxone',
-        'de': 'Loxone',
-        'pl': 'Loxone',
-    },
-    'Enable direct Loxone integration': {
-        'en': 'Enable direct Loxone integration',
-        'de': 'Direkte Loxone-Integration aktivieren',
-        'pl': 'Wlacz bezposrednia integracje z Loxone',
-    },
-    'Loxone Miniserver IP': {
-        'en': 'Loxone Miniserver IP',
-        'de': 'Loxone Miniserver IP',
-        'pl': 'IP Loxone Miniserver',
-    },
-    'Communication mode': {
-        'en': 'Communication mode',
-        'de': 'Kommunikationsmodus',
-        'pl': 'Tryb komunikacji',
-    },
-    'Advanced': {
-        'en': 'Advanced',
-        'de': 'Erweitert',
-        'pl': 'Zaawansowane',
-    },
+    'ReoLox': { en: 'ReoLox', de: 'ReoLox', pl: 'ReoLox' },
+    'Cameras': { en: 'Cameras', de: 'Kameras', pl: 'Kamery' },
+    'Loxone': { en: 'Loxone', de: 'Loxone', pl: 'Loxone' },
+    'Webhook': { en: 'Webhook', de: 'Webhook', pl: 'Webhook' },
+    'Advanced': { en: 'Advanced', de: 'Erweitert', pl: 'Zaawansowane' },
 };

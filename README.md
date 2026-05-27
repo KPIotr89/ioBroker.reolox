@@ -1,384 +1,121 @@
 <p align="center">
-  <img src="admin/reolink-loxone.svg" width="120" alt="ioBroker.reolink-loxone"/>
+  <img src="admin/reolox.svg" width="120" alt="ReoLox"/>
 </p>
 
-<h1 align="center">ioBroker.reolink-loxone</h1>
+<h1 align="center">ioBroker.reolox</h1>
 
 <p align="center">
-  Complete Reolink camera integration for ioBroker with native Loxone Miniserver bridge
+  <b>ReoLox</b> — Reolink camera bridge for ioBroker with first-class Loxone Miniserver integration
 </p>
 
 <p align="center">
-  <a href="https://github.com/KPIotr89/ioBroker.reolink-loxone/releases"><img src="https://img.shields.io/github/v/release/KPIotr89/ioBroker.reolink-loxone?style=flat-square&color=0071e3" alt="Release"/></a>
-  <a href="https://github.com/KPIotr89/ioBroker.reolink-loxone/blob/main/LICENSE"><img src="https://img.shields.io/github/license/KPIotr89/ioBroker.reolink-loxone?style=flat-square&color=34c759" alt="License"/></a>
-  <img src="https://img.shields.io/node/v/iobroker.reolink-loxone?style=flat-square&color=ff9500" alt="Node.js"/>
-  <a href="https://github.com/KPIotr89/ioBroker.reolink-loxone/actions"><img src="https://img.shields.io/github/actions/workflow/status/KPIotr89/ioBroker.reolink-loxone/test-and-release.yml?style=flat-square&label=CI" alt="CI"/></a>
+  <a href="https://github.com/KPIotr89/ioBroker.reolox/releases"><img src="https://img.shields.io/github/v/release/KPIotr89/ioBroker.reolox?style=flat-square&color=0071e3" alt="Release"/></a>
+  <a href="https://github.com/KPIotr89/ioBroker.reolox/blob/main/LICENSE"><img src="https://img.shields.io/github/license/KPIotr89/ioBroker.reolox?style=flat-square&color=34c759" alt="License"/></a>
+  <img src="https://img.shields.io/node/v/iobroker.reolox?style=flat-square&color=ff9500" alt="Node.js"/>
+  <a href="https://github.com/KPIotr89/ioBroker.reolox/actions"><img src="https://img.shields.io/github/actions/workflow/status/KPIotr89/ioBroker.reolox/test-and-release.yml?style=flat-square&label=CI" alt="CI"/></a>
 </p>
-
-<br/>
 
 ---
 
 ## What it does
 
-Connect every Reolink camera in your home to ioBroker and Loxone — without cloud, without Node-RED, without compromise. The adapter talks directly to the camera's local HTTP API, exposes all states in ioBroker's object tree, and forwards events to your Loxone Miniserver in real time.
-
-<br/>
+ReoLox connects every Reolink camera in your home to ioBroker and Loxone. No cloud, no Node-RED, no MQTT bridge — the adapter talks directly to the camera's local HTTP API, exposes every state in ioBroker's object tree, and forwards events to your Loxone Miniserver in real time.
 
 ## Highlights
 
-**📷 Full camera control**
-Motion detection · AI detection (person, vehicle, animal, face) · White LED spotlight · IR lights · PTZ · Siren · Snapshots · Image settings
+**Camera control**: motion, AI (person / vehicle / animal / face), doorbell button, IR lights, WhiteLed spotlight, PTZ with presets, ISP image settings, snapshots, RTSP / RTMP / FLV stream URLs.
 
-**🏠 Native Loxone integration**
-Events arrive at Loxone Virtual Inputs via HTTP or UDP — the same second they happen. No intermediary, no polling on the Loxone side.
+**Direct Loxone bridge**: every event becomes a Virtual Input the Miniserver receives via HTTP (Token Auth, HMAC-SHA1) or UDP. Names follow the `ReoLox_<Camera>_<Event>` convention and are visible per camera in the `<camId>.loxone.*` states. Loxone Intercom integration ships the RTSP stream URL on doorbell ring.
 
-**🔔 Doorbell & visitor detection**
-Reolink push webhooks deliver doorbell button presses instantly. No polling. Works exactly like a real doorbell.
+**Push webhook (no polling for doorbell)**: a local HTTP server receives Reolink push events. Hardened with source-IP allowlist, shared-secret authentication, 64 KB body cap, and CRLF-sanitised logging.
 
-**🚪 Gate trigger**
-Brief spotlight flash from the Reolink app (≤ 3 s ON → OFF) detected by the adapter and forwarded to Loxone as a gate open command.
+**Gate trigger over WhiteLed**: a brief `≤3 s` ON→OFF flash from the Reolink app sends `gate_trigger=1` to Loxone. Useful for opening a gate when the camera owner is approaching.
 
-**🔌 Webhook push receiver**
-Built-in HTTP server receives push alerts from cameras. The adapter auto-configures each camera's push URL on startup.
+**go2rtc-ready**: optional re-stream URL so Loxone Intercom and Touch panels can show MJPEG without burning credentials.
 
-**🔍 Auto-discovery**
-One click in the admin panel probes the local network via ONVIF WS-Discovery UDP multicast and confirms every Reolink device it finds. Returns model, firmware version and serial — ready to paste into the camera list.
+**Auto-discovery**: the Admin panel finds Reolink cameras via ONVIF WS-Discovery in seconds.
 
-**🎥 Loxone Intercom**
-When a doorbell button is pressed the adapter sends the camera's RTSP stream URL to a Loxone Virtual Input. Loxone Touch panels can display the live feed automatically.
+## Compatibility
 
-**⚡ Multi-camera**
-Manage 20+ cameras from a single adapter instance.
+| Component | Tested with |
+|---|---|
+| ioBroker js-controller | ≥ 5.0 |
+| ioBroker admin | ≥ 6.0 |
+| Node.js | 18, 20, 22 |
+| Reolink firmware | v3.x (CX810 / Doorbell PoE / RLC-810A) |
+| Loxone Miniserver | Gen 1 (Basic Auth) / Gen 2 (Token Auth) |
 
-<br/>
-
----
-
-## Supported cameras
-
-Works with any Reolink camera or NVR that exposes the local HTTP API.
-
-| Series | Models |
-|--------|--------|
-| PoE Bullet / Dome | RLC-810A, RLC-820A, RLC-811A, RLC-1212A, RLC-510A, RLC-410 |
-| PoE PTZ | RLC-823A, RLC-823S, RLC-833A |
-| Wi-Fi | E1, E1 Zoom, E1 Pro, E1 Outdoor, Argus 3 Pro, Argus PT |
-| Dual-lens | Duo 2 PoE, Duo 3, TrackMix PoE, TrackMix Wi-Fi |
-| Doorbell | Video Doorbell PoE, Video Doorbell Wi-Fi |
-| NVR | RLN8-410, RLN16-410, RLN36 (each channel independently) |
-| ColorX | CX410, CX810, CX820 |
-
-<br/>
-
----
-
-## Installation
+## Install
 
 ```bash
-cd /opt/iobroker
-iobroker url https://github.com/KPIotr89/ioBroker.reolink-loxone
+iobroker url https://github.com/KPIotr89/ioBroker.reolox
 ```
 
-<br/>
+Then add cameras in **Admin → Adapters → ReoLox → Configuration**.
 
----
+## Configuration overview
 
-## Configuration
+### Cameras tab
+Add each camera (IP, user, password, channel for NVR multi-channel devices). The discover button performs an ONVIF probe. Camera passwords are stored encrypted by ioBroker (`protectedNative`).
 
-### Cameras
+### Loxone tab
+Enable the bridge, set the Miniserver IP and credentials. Pick **Token Auth** (recommended) — the adapter does the HMAC-SHA1 handshake and refreshes tokens proactively at 80 % of their lifetime. The Virtual Input prefix is configurable (`ReoLox` by default).
 
-Add each camera in the **Cameras** tab. One row per camera or NVR channel.
+### Webhook tab
+Start the local HTTP server (default port `7777`). Set the ioBroker IP visible to cameras and — strongly recommended — a shared secret. The adapter sets the push URL on every camera at startup, so no manual setup in the Reolink web UI is needed.
 
-| Field | Default | Description |
-|-------|---------|-------------|
-| Enabled | ✓ | Include this camera in polling |
-| Name | — | Friendly name, used in state tree and Loxone VI names |
-| IP / Host | — | Camera IP address or hostname |
-| Port | 80 | HTTP port (443 for HTTPS) |
-| Username | admin | Camera login |
-| Password | — | Camera password |
-| Channel | 0 | 0 for standalone cameras; 0–15 for NVR channels |
-| HTTPS | off | Enable TLS |
-| Poll (s) | 5 | Status polling interval |
-| Gate trigger | off | Enable WhiteLed flash → gate open signal |
+### Advanced tab
+Capability cache TTL, snapshot retention, debug logging.
 
+## Loxone Virtual Inputs
 
-> **Required for WhiteLed control:** the camera user account must have admin-level permissions. Guest accounts cannot control the spotlight.
-
-<br/>
-
-### Loxone
-
-Configure the Miniserver connection in the **Loxone** tab.
-
-| Field | Description |
-|-------|-------------|
-| Enable | Activate the Loxone bridge |
-| Miniserver IP | IP address of your Loxone Miniserver |
-| HTTP Port | Usually 80 |
-| Username / Password | A Loxone user with Virtual Input write access |
-| Mode | HTTP Virtual Inputs · UDP · Both |
-| UDP Port | Target UDP port (default 7000) |
-
-#### Virtual Input naming
-
-Create these Virtual Inputs in Loxone Config to receive events:
+For a camera named `garaz` (and the default prefix), create these inputs in Loxone Config — names are case-sensitive:
 
 ```
-Reolink_{CameraName}_Motion       →  motion detected (0 / 1)
-Reolink_{CameraName}_AI_person    →  person detected (0 / 1)
-Reolink_{CameraName}_AI_vehicle   →  vehicle detected (0 / 1)
-Reolink_{CameraName}_AI_animal    →  animal detected (0 / 1)
-Reolink_{CameraName}_Online       →  camera online (0 / 1)
-Reolink_{CameraName}_Visitor      →  doorbell pressed (0 / 1)
-Reolink_{CameraName}_gate_trigger →  gate trigger pulse (1)
-Reolink_{CameraName}_Intercom     →  RTSP stream URL (text, on doorbell press)
+ReoLox_garaz_Motion          (digital)
+ReoLox_garaz_AI_person       (digital)
+ReoLox_garaz_AI_vehicle      (digital)
+ReoLox_garaz_AI_animal       (digital)
+ReoLox_garaz_Online          (digital)
+ReoLox_garaz_Visitor         (digital, pulse 1s on ring)
+ReoLox_garaz_gate_trigger    (digital, pulse 1s on knock-pattern)
+ReoLox_garaz_intercom        (text, RTSP URL on ring — for Intercom)
+ReoLox_garaz_whiteLed        (digital, mirrors spotlight state)
 ```
 
-Custom names can be changed per camera under the `loxone` channel in the ioBroker object tree.
+The exact VI names per camera are also written to `<camId>.loxone.vi*` states once the instance starts.
 
-#### Loxone Intercom
+## Migration from v1.x (`reolink-loxone`)
 
-Enable **Loxone Intercom** in the Loxone tab. When a doorbell button is pressed the adapter sends the camera's main RTSP stream URL (`rtsp://user:pass@ip:554/h264Preview_01_main`) to the `Reolink_{CameraName}_Intercom` Virtual Input. Configure that VI as a "Text" type in Loxone Config and connect it to an Intercom or Camera block to display the live feed on Touch panels automatically.
+v2.0 is a breaking rename. **State paths change** (`reolink-loxone.0.*` → `reolox.0.*`) and so does the **Loxone VI prefix** (`Reolink_*` → `ReoLox_*`). To migrate:
 
-<br/>
+1. Stop the old instance (`iobroker stop reolink-loxone.0`).
+2. Install ReoLox (`iobroker url https://github.com/KPIotr89/ioBroker.reolox`).
+3. Configure the new instance — settings are not migrated automatically.
+4. In **Loxone Config**, search-and-replace `Reolink_` → `ReoLox_` across your VI names (or set `loxoneViPrefix = "Reolink"` in ReoLox to keep the old prefix).
+5. Once the new instance is healthy, remove the old one (`iobroker del reolink-loxone.0`).
 
-### Webhook
+## go2rtc integration
 
-Enable the push receiver in the **Webhook** tab to receive doorbell and alarm events without polling.
+ReoLox does not embed go2rtc; pair it with a separate instance for re-streaming. Example `/etc/go2rtc/go2rtc.yaml`:
 
-| Field | Description |
-|-------|-------------|
-| Enable | Start the built-in HTTP server |
-| Port | Port cameras will POST to (default 7777) |
-| ioBroker IP | IP of the ioBroker machine — used to auto-configure cameras |
-
-When both IP and port are set, the adapter calls `SetPushV20` on each camera at startup and configures the push URL automatically. If your firmware does not support `SetPushV20`, set the URL manually in the camera's web UI:
-
-```
-http://{ioBroker-IP}:7777/reolink/{CameraName}
-```
-
-<br/>
-
-### Auto-discovery
-
-Click the **🔍 Discover cameras** button in the Cameras tab. The adapter sends an ONVIF WS-Discovery UDP probe to `239.255.255.250:3702` and waits 3 seconds for responses. Every responding device is then verified via the Reolink HTTP API — non-Reolink ONVIF devices are silently ignored.
-
-Results are shown in the admin panel as a table:
-
-| IP | Port | Model | Firmware | Serial |
-|----|------|-------|----------|--------|
-| 192.168.0.51 | 80 | RLC-810A | v3.1.0.2368 | ... |
-
-Copy the IP, port and any details you need directly into the camera list.
-
-<br/>
-
-<br/>
-
----
-
-## State tree
-
-```
-reolink-loxone.0.
-└── {camera_name}/
-    ├── info/
-    │   ├── connection          boolean   Camera reachable
-    │   ├── model               string    Camera model
-    │   ├── firmware            string    Firmware version
-    │   └── serial              string    Serial number
-    ├── status/
-    │   ├── motionDetected      boolean   Motion active
-    │   ├── personDetected      boolean   Person detected (AI)
-    │   ├── vehicleDetected     boolean   Vehicle detected (AI)
-    │   ├── animalDetected      boolean   Animal detected (AI)
-    │   ├── faceDetected        boolean   Face detected (AI)
-    │   ├── whiteLed            boolean   Spotlight state (live)
-    │   ├── whiteLedTrigger     boolean   Gate trigger pulse
-    │   ├── visitorDetected     boolean   Doorbell pressed
-    │   ├── doorbellRing        boolean   Physical button state
-    │   └── lastMotionTime      number    Last motion timestamp
-    ├── control/              ← writable
-    │   ├── snapshot            button    Capture snapshot
-    │   ├── reboot              button    Reboot camera
-    │   ├── irLights            string    Auto / On / Off
-    │   ├── whiteLed            boolean   Spotlight on/off
-    │   └── siren               button    Trigger alarm
-    ├── ptz/                  ← writable (PTZ cameras only)
-    │   ├── command             string    Left/Right/Up/Down/ZoomInc…
-    │   ├── speed               number    1–64
-    │   ├── goToPreset          number    Preset index
-    │   ├── patrol              boolean   Start/stop patrol
-    │   └── stop                button    Stop movement
-    ├── streams/
-    │   ├── rtspMain            string    RTSP main stream URL
-    │   ├── rtspSub             string    RTSP sub stream URL
-    │   ├── rtmpMain            string    RTMP stream URL
-    │   └── snapshotUrl         string    Snapshot endpoint URL
-    ├── image/                ← writable
-    │   ├── brightness          number    0–255
-    │   ├── contrast            number    0–255
-    │   ├── saturation          number    0–255
-    │   └── sharpness           number    0–255
-    ├── snapshot/
-    │   ├── image               string    Last snapshot (base64)
-    │   ├── timestamp           number    Capture time
-    │   └── file                string    Saved file path
-    ├── storage/
-    │   ├── hddCapacity         number    Total SD/HDD capacity (MB)
-    │   └── hddUsed             number    Used space (MB)
-    └── loxone/               ← writable (when Loxone enabled)
-        ├── motionInputName     string    Custom VI name for motion
-        ├── personInputName     string    Custom VI name for person
-        ├── vehicleInputName    string    Custom VI name for vehicle
-        ├── onlineInputName     string    Custom VI name for status
-        └── visitorInputName    string    Custom VI name for doorbell
+```yaml
+streams:
+  front: rtsp://loxone:loxone123@192.168.0.48:554/h264Preview_01_main
+  taras: rtsp://loxone:loxone123@192.168.0.49:554/h264Preview_01_main
+  garaz: rtsp://loxone:loxone123@192.168.0.61:554/h264Preview_01_main
 ```
 
-<br/>
+Then in the ReoLox Webhook tab set `go2rtc base URL` to `rtsp://<ip>:8554`. On doorbell ring the bridge will send `rtsp://<ip>:8554/<camera>` to the Intercom VI.
 
----
-
-## How events flow
-
-```
-Reolink Camera
-│
-├─ HTTP API polling (motion, AI, WhiteLed)
-│         │
-│         ▼
-│   ioBroker Adapter  ──────────────────────► ioBroker state tree
-│         │                                   (scripts, VIS, Grafana)
-│         │
-│         ▼
-│   Loxone Bridge
-│         │
-│         ├─ HTTP ──► Loxone Virtual Input
-│         └─ UDP  ──► Loxone UDP Monitor
-│
-├─ Push webhook (doorbell, visitor)
-│         │
-│         ▼
-│   Built-in HTTP server :7777
-│         │
-│         ▼
-│   ioBroker Adapter  ──────────────────────► Loxone Virtual Input
-│
-└─ Fast WhiteLed poll 1 s (gate trigger cameras)
-          │
-          ▼  ON → OFF  ≤ 3 s
-    Gate trigger pulse ─────────────────────► Loxone gate_trigger
-```
-
-<br/>
-
----
-
-## Automation examples
-
-### JavaScript (ioBroker)
-
-```javascript
-// Turn on porch light when person detected
-on('reolink-loxone.0.front_door.status.personDetected', obj => {
-    if (obj.state.val) setState('hue.0.porch.on', true);
-});
-
-// Capture snapshot on motion
-on('reolink-loxone.0.driveway.status.motionDetected', obj => {
-    if (obj.state.val) setState('reolink-loxone.0.driveway.control.snapshot', true);
-});
-
-// Rotate PTZ camera to entrance preset when doorbell rings
-on('reolink-loxone.0.doorbell.status.visitorDetected', obj => {
-    if (obj.state.val) setState('reolink-loxone.0.garden.ptz.goToPreset', 2);
-});
-```
-
-### Loxone Config
-
-| Trigger | Action |
-|---------|--------|
-| `Reolink_FrontDoor_AI_person = 1` | Switch on entrance light |
-| `Reolink_Garage_Motion = 1` AND alarm armed | Trigger alarm zone |
-| `Reolink_Driveway_gate_trigger = 1` | Open gate |
-| `Reolink_Doorbell_Visitor = 1` | Play doorbell chime |
-
-<br/>
-
----
-
-## Troubleshooting
-
-**Camera not connecting**
-Verify the IP is reachable (`ping`), the HTTP API is enabled on the camera (default: yes), and credentials are correct. Some firmware versions require HTTPS.
-
-**WhiteLed control returns "ability error"**
-The camera user account is set to Guest level. Change it to Admin in the camera settings under Device Settings → User Management.
-
-**Motion detection not updating**
-Confirm motion detection is enabled in the Reolink app or web UI. AI detection (person/vehicle) requires cameras with an "A" suffix in the model name (e.g., RLC-810A).
-
-**Doorbell push not received**
-Check that the webhook port (7777) is accessible from the camera's network. Verify in the adapter log that the push URL was configured successfully. If auto-config failed, set the URL manually in the camera web UI under Alarm → Push.
-
-**Loxone Virtual Input not updating**
-Virtual Input names are case-sensitive. Make sure the name in Loxone Config matches exactly. Verify the Loxone user has write access.
-
-**Gate trigger not firing**
-Enable the "Gate trigger" checkbox for that camera in adapter settings. The camera user must have admin permissions for WhiteLed control.
-
-<br/>
-
----
-
-## API coverage
-
-| Category | Commands |
-|----------|----------|
-| Auth | Login, Logout, token renewal |
-| Device | GetDevInfo, GetAbility, GetHddInfo, Reboot |
-| Network | GetLocalLink, GetWifi, GetDdns, GetNtp, GetP2p, GetNetPort |
-| Video | GetEnc, SetEnc, GetIsp, SetIsp |
-| Streams | RTSP main/sub/ext, RTMP, FLV, Snap |
-| Motion | GetMdState, GetAlarm, SetAlarm |
-| AI | GetAiState, GetAiCfg, SetAiCfg |
-| PTZ | PtzCtrl, GetPtzPreset, SetPtzPreset, GetPtzPatrol |
-| LED | GetIrLights, SetIrLights, GetWhiteLed, SetWhiteLed |
-| Siren | AudioAlarmPlay |
-| Push | GetPushV20, SetPushV20 |
-| Doorbell | GetDoorbell |
-| Recording | GetRec, SetRec |
-| OSD | GetOsd, SetOsd, GetMask |
-| System | GetTime, SetTime, GetUser, GetOnline |
-
-<br/>
-
----
-
-## Development
+## Service commands
 
 ```bash
-git clone https://github.com/KPIotr89/ioBroker.reolink-loxone.git
-cd ioBroker.reolink-loxone
-npm install
-npm run lint
-npm test
+iobroker upload reolox          # refresh admin assets
+iobroker restart reolox.0       # restart instance
+iobroker logs reolox --watch    # tail logs
 ```
-
-<br/>
-
----
 
 ## License
 
-MIT © [Piotr Kalbarczyk](https://github.com/KPIotr89)
-
----
-
-<p align="center">
-  Built for the ioBroker · Loxone · Reolink community
-</p>
+MIT © Piotr Kalbarczyk

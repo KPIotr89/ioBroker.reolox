@@ -1,295 +1,331 @@
 {
-  "i18n": true,
-  "type": "tabs",
-  "items": {
-    "_tabCameras": {
-      "type": "panel",
-      "label": "Cameras",
-      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMTcgMTAuNVY3YTEgMSAwIDAgMC0xLTFINGExIDEgMCAwIDAtMSAxdjEwYTEgMSAwIDAgMCAxIDFoMTJhMSAxIDAgMCAwIDEtMXYtMy41bDQgNFY2LjVsLTQgNHoiLz48L3N2Zz4=",
-      "items": {
-        "cameras": {
-          "type": "table",
-          "label": "Camera list",
-          "noDelete": false,
-          "items": [
-            {
-              "type": "checkbox",
-              "attr": "enabled",
-              "label": "On",
-              "default": true,
-              "width": "50px"
-            },
-            {
-              "type": "text",
-              "attr": "name",
-              "label": "Name",
-              "placeholder": "Front Door",
-              "width": "130px",
-              "validator": "/^[a-zA-Z0-9_ -]{1,32}$/"
-            },
-            {
-              "type": "text",
-              "attr": "host",
-              "label": "IP / Host",
-              "placeholder": "192.168.1.100",
-              "width": "150px"
-            },
-            {
-              "type": "number",
-              "attr": "port",
-              "label": "Port",
-              "default": 80,
-              "min": 1,
-              "max": 65535,
-              "width": "70px"
-            },
-            {
-              "type": "text",
-              "attr": "username",
-              "label": "User",
-              "default": "admin",
-              "width": "90px"
-            },
-            {
-              "type": "password",
-              "attr": "password",
-              "label": "Password",
-              "width": "110px"
-            },
-            {
-              "type": "number",
-              "attr": "channel",
-              "label": "Ch",
-              "default": 0,
-              "min": 0,
-              "max": 15,
-              "width": "50px",
-              "tooltip": "Channel index — 0 for standalone cameras, 0-15 for NVR channels"
-            },
-            {
-              "type": "checkbox",
-              "attr": "useHttps",
-              "label": "TLS",
-              "default": false,
-              "width": "50px",
-              "tooltip": "Use HTTPS (port 443)"
-            },
-            {
-              "type": "number",
-              "attr": "pollInterval",
-              "label": "Poll s",
-              "default": 5,
-              "min": 1,
-              "max": 300,
-              "width": "65px",
-              "tooltip": "Status polling interval in seconds"
-            },
-            {
-              "type": "checkbox",
-              "attr": "whiteLedGateTrigger",
-              "label": "Gate",
-              "default": false,
-              "width": "55px",
-              "tooltip": "Brief WhiteLed flash (≤3 s ON→OFF) from Reolink app triggers gate_trigger event to Loxone. Camera user must be Admin level."
-            },
-          ],
-          "default": []
+    "i18n": true,
+    "type": "tabs",
+    "items": {
+        "_tabCameras": {
+            "type": "panel",
+            "label": "Cameras",
+            "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMTcgMTAuNVY3YTEgMSAwIDAgMC0xLTFINGExIDEgMCAwIDAtMSAxdjEwYTEgMSAwIDAgMCAxIDFoMTJhMSAxIDAgMCAwIDEtMXYtMy41bDQgNFY2LjVsLTQgNHoiLz48L3N2Zz4=",
+            "items": {
+                "cameras": {
+                    "type": "table",
+                    "label": "Camera list",
+                    "noDelete": false,
+                    "items": [
+                        {
+                            "type": "checkbox",
+                            "attr": "enabled",
+                            "label": "On",
+                            "default": true,
+                            "width": "50px"
+                        },
+                        {
+                            "type": "text",
+                            "attr": "name",
+                            "label": "Name",
+                            "placeholder": "Front Door",
+                            "width": "130px",
+                            "validator": "/^[a-zA-Z0-9_ -]{1,32}$/",
+                            "tooltip": "Used for state IDs and Loxone VI names — must be unique across the camera list."
+                        },
+                        {
+                            "type": "text",
+                            "attr": "host",
+                            "label": "IP / Host",
+                            "placeholder": "192.168.1.100",
+                            "width": "150px"
+                        },
+                        {
+                            "type": "number",
+                            "attr": "port",
+                            "label": "Port",
+                            "default": 80,
+                            "min": 1,
+                            "max": 65535,
+                            "width": "70px"
+                        },
+                        {
+                            "type": "text",
+                            "attr": "username",
+                            "label": "User",
+                            "default": "admin",
+                            "width": "90px"
+                        },
+                        {
+                            "type": "password",
+                            "attr": "password",
+                            "label": "Password",
+                            "width": "110px"
+                        },
+                        {
+                            "type": "number",
+                            "attr": "channel",
+                            "label": "Ch",
+                            "default": 0,
+                            "min": 0,
+                            "max": 15,
+                            "width": "50px",
+                            "tooltip": "Channel index — 0 for standalone cameras, 0-15 for NVR channels"
+                        },
+                        {
+                            "type": "checkbox",
+                            "attr": "useHttps",
+                            "label": "TLS",
+                            "default": false,
+                            "width": "50px",
+                            "tooltip": "Use HTTPS (port 443)"
+                        },
+                        {
+                            "type": "number",
+                            "attr": "pollInterval",
+                            "label": "Poll s",
+                            "default": 5,
+                            "min": 1,
+                            "max": 300,
+                            "width": "65px",
+                            "tooltip": "Status polling interval in seconds"
+                        },
+                        {
+                            "type": "checkbox",
+                            "attr": "whiteLedGateTrigger",
+                            "label": "Gate",
+                            "default": false,
+                            "width": "55px",
+                            "tooltip": "Brief WhiteLed flash (≤3 s ON→OFF) from the Reolink app triggers a gate_trigger event to Loxone. Camera user must have Admin role."
+                        }
+                    ],
+                    "default": []
+                },
+                "_discoverBtn": {
+                    "type": "sendTo",
+                    "command": "discover",
+                    "label": "🔍 Discover Reolink cameras on network",
+                    "jsonData": "{\"timeout\":5000}",
+                    "showProcess": true,
+                    "error": "error",
+                    "result": "result",
+                    "style": { "marginBottom": "12px" }
+                },
+                "_cameraHelp": {
+                    "type": "staticText",
+                    "label": "",
+                    "text": "ℹ️  WhiteLed / spotlight control requires the camera user account to have **Admin** role (not Guest). Change it in the camera Device Settings → User Management. Camera passwords are stored encrypted in the adapter native settings.",
+                    "style": {
+                        "marginTop": "12px",
+                        "padding": "10px 14px",
+                        "backgroundColor": "#e8f4fd",
+                        "borderLeft": "3px solid #0071e3",
+                        "borderRadius": "4px",
+                        "fontSize": "13px",
+                        "color": "#1d1d1f"
+                    }
+                },
+                "_divider1": { "type": "divider" },
+                "defaultPollInterval": {
+                    "type": "number",
+                    "label": "Default poll interval (seconds)",
+                    "default": 5,
+                    "min": 1,
+                    "max": 300,
+                    "help": "Fallback interval for cameras with no custom interval set"
+                },
+                "capabilityCacheTtlHours": {
+                    "type": "number",
+                    "label": "Capability cache TTL (hours)",
+                    "default": 24,
+                    "min": 0,
+                    "max": 720,
+                    "help": "GetAbility responses are cached on disk to speed up restarts. Set to 0 to disable."
+                }
+            }
         },
-        "_discoverBtn": {
-          "type": "sendTo",
-          "command": "discover",
-          "label": "🔍 Discover Reolink cameras on network",
-          "jsonData": "{\"timeout\":5000}",
-          "showProcess": true,
-          "error": "error",
-          "result": "result",
-          "style": { "marginBottom": "12px" }
+        "_tabLoxone": {
+            "type": "panel",
+            "label": "Loxone",
+            "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMTAgMjB2LTZoNHY2aDV2LThoM0wxMiAzIDIgMTJoM3Y4eiIvPjwvc3ZnPg==",
+            "items": {
+                "loxoneEnabled": {
+                    "type": "checkbox",
+                    "label": "Enable Loxone integration",
+                    "default": false,
+                    "help": "Forward camera events directly to Loxone Miniserver (HTTP Virtual Inputs or UDP)"
+                },
+                "loxoneHost": {
+                    "type": "text",
+                    "label": "Miniserver IP address",
+                    "placeholder": "192.168.1.10",
+                    "hidden": "!data.loxoneEnabled"
+                },
+                "loxonePort": {
+                    "type": "number",
+                    "label": "HTTP port",
+                    "default": 80,
+                    "min": 1,
+                    "max": 65535,
+                    "hidden": "!data.loxoneEnabled"
+                },
+                "loxoneUser": {
+                    "type": "text",
+                    "label": "Username",
+                    "hidden": "!data.loxoneEnabled",
+                    "tooltip": "Loxone user with permission to write Virtual Inputs"
+                },
+                "loxonePassword": {
+                    "type": "password",
+                    "label": "Password",
+                    "hidden": "!data.loxoneEnabled",
+                    "tooltip": "Stored encrypted in the instance native settings"
+                },
+                "loxoneAuth": {
+                    "type": "select",
+                    "label": "Authentication",
+                    "options": [
+                        { "label": "Token (HMAC, recommended)", "value": "token" },
+                        { "label": "Basic (legacy / Gen 1)", "value": "basic" }
+                    ],
+                    "default": "token",
+                    "hidden": "!data.loxoneEnabled",
+                    "help": "Token auth avoids sending the password on every event. Falls back to Basic automatically if the Miniserver does not support it."
+                },
+                "loxoneMode": {
+                    "type": "select",
+                    "label": "Communication mode",
+                    "options": [
+                        { "label": "HTTP Virtual Inputs", "value": "http" },
+                        { "label": "UDP", "value": "udp" },
+                        { "label": "Both (HTTP + UDP)", "value": "both" }
+                    ],
+                    "default": "http",
+                    "hidden": "!data.loxoneEnabled"
+                },
+                "loxoneUdpPort": {
+                    "type": "number",
+                    "label": "UDP port",
+                    "default": 7000,
+                    "min": 1,
+                    "max": 65535,
+                    "hidden": "data.loxoneMode === 'http' || !data.loxoneEnabled"
+                },
+                "loxoneViPrefix": {
+                    "type": "text",
+                    "label": "Virtual Input prefix",
+                    "default": "ReoLox",
+                    "hidden": "!data.loxoneEnabled",
+                    "help": "Prefix for all generated VI names. Default `ReoLox` → `ReoLox_<Camera>_Motion` etc. Leave default unless you need a legacy `Reolink` prefix."
+                },
+                "_dividerIntercom": { "type": "divider" },
+                "loxoneIntercomEnabled": {
+                    "type": "checkbox",
+                    "label": "Enable Loxone Intercom integration",
+                    "default": false,
+                    "hidden": "!data.loxoneEnabled",
+                    "help": "When doorbell rings, send the RTSP stream URL to <Prefix>_<Camera>_intercom so the Loxone Touch panel can display the camera feed."
+                },
+                "_loxoneInfo": {
+                    "type": "staticText",
+                    "label": "",
+                    "text": "**Virtual Input naming convention**\n\nCreate these inputs in Loxone Config (names are case-sensitive). Prefix is configurable above; the default is `ReoLox`.\n\n`ReoLox_{Name}_Motion` — motion detected\n`ReoLox_{Name}_AI_person` — person (AI)\n`ReoLox_{Name}_AI_vehicle` — vehicle (AI)\n`ReoLox_{Name}_AI_animal` — animal (AI)\n`ReoLox_{Name}_Online` — camera online (1/0)\n`ReoLox_{Name}_Visitor` — doorbell pressed (1/0)\n`ReoLox_{Name}_gate_trigger` — gate trigger pulse (1)\n`ReoLox_{Name}_intercom` — RTSP URL string on ring (Loxone Intercom)\n\nThe exact VI names for each camera are visible in `<camId>.loxone.*` states after the instance starts.",
+                    "hidden": "!data.loxoneEnabled",
+                    "style": {
+                        "marginTop": "16px",
+                        "padding": "12px 16px",
+                        "backgroundColor": "#f5f5f7",
+                        "borderRadius": "8px",
+                        "fontSize": "13px",
+                        "lineHeight": "1.6"
+                    }
+                }
+            }
         },
-        "_cameraHelp": {
-          "type": "staticText",
-          "label": "",
-          "text": "ℹ️  WhiteLed / spotlight control requires the camera user account to be set to **Admin** level (not Guest). Change it in the camera's Device Settings → User Management.",
-          "style": {
-            "marginTop": "12px",
-            "padding": "10px 14px",
-            "backgroundColor": "#e8f4fd",
-            "borderLeft": "3px solid #0071e3",
-            "borderRadius": "4px",
-            "fontSize": "13px",
-            "color": "#1d1d1f"
-          }
+        "_tabWebhook": {
+            "type": "panel",
+            "label": "Webhook",
+            "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMTIgMkM2LjQ4IDIgMiA2LjQ4IDIgMTJzNC40OCAxMCAxMCAxMCAxMC00LjQ4IDEwLTEwUzE3LjUyIDIgMTIgMnptLTEgMTVoLTJ2LTZoMnY2em0wLThoLTJWN2gydjJ6Ii8+PC9zdmc+",
+            "items": {
+                "webhookEnabled": {
+                    "type": "checkbox",
+                    "label": "Enable webhook server",
+                    "default": false,
+                    "help": "Start a local HTTP server that receives push events from Reolink cameras — no polling needed for doorbell and visitor events."
+                },
+                "webhookPort": {
+                    "type": "number",
+                    "label": "Listen port",
+                    "default": 7777,
+                    "min": 1024,
+                    "max": 65535,
+                    "hidden": "!data.webhookEnabled",
+                    "help": "Port cameras POST to — must be reachable from the camera network."
+                },
+                "webhookHost": {
+                    "type": "text",
+                    "label": "ioBroker IP (visible to cameras)",
+                    "placeholder": "192.168.1.100",
+                    "hidden": "!data.webhookEnabled",
+                    "help": "Used to auto-configure each camera's push URL on startup."
+                },
+                "webhookSharedSecret": {
+                    "type": "password",
+                    "label": "Shared secret (recommended)",
+                    "hidden": "!data.webhookEnabled",
+                    "help": "If set, every webhook POST must include `?secret=…` or X-ReoLox-Secret header with this value. Auto-configured push URLs include it automatically. Stored encrypted."
+                },
+                "webhookIpAllowlist": {
+                    "type": "text",
+                    "label": "Source IP allowlist",
+                    "default": "auto",
+                    "hidden": "!data.webhookEnabled",
+                    "help": "`auto` = accept only the IPs of cameras configured in the Cameras tab. Otherwise comma-separated IPs (e.g. `192.168.0.48, 192.168.0.49`)."
+                },
+                "go2rtcUrl": {
+                    "type": "text",
+                    "label": "go2rtc base URL (optional)",
+                    "placeholder": "rtsp://192.168.0.201:8554",
+                    "help": "If set, Loxone Intercom will receive go2rtc RTSP URLs instead of direct camera URLs. Format: rtsp://ip:8554"
+                },
+                "_webhookInfo": {
+                    "type": "staticText",
+                    "label": "",
+                    "text": "**How it works**\n\nWhen ioBroker IP, port and shared secret are set, the adapter automatically sets the push URL on each camera at startup.\n\nCameras POST to:\n`http://{ioBroker-IP}:{port}/reolox/{CameraName}?secret=****`\n\nEvents handled: **visitor** (doorbell button), **motion**, **person**, **vehicle**, **animal**.\n\nThe server validates:\n  • POST method only\n  • path must start with `/reolox/`\n  • source IP must be in the allowlist (auto-derived by default)\n  • shared secret matches (constant-time comparison)\n  • body ≤ 64 KB (oversize requests get HTTP 413).\n\n**Manual setup** — if auto-config fails or firmware is older:\nCamera web UI → Alarm → Push → set URL to the address above.",
+                    "hidden": "!data.webhookEnabled",
+                    "style": {
+                        "marginTop": "16px",
+                        "padding": "12px 16px",
+                        "backgroundColor": "#f5f5f7",
+                        "borderRadius": "8px",
+                        "fontSize": "13px",
+                        "lineHeight": "1.6"
+                    }
+                }
+            }
         },
-        "_divider1": {
-          "type": "divider"
-        },
-        "defaultPollInterval": {
-          "type": "number",
-          "label": "Default poll interval (seconds)",
-          "default": 5,
-          "min": 1,
-          "max": 300,
-          "help": "Fallback interval for cameras with no custom interval set"
+        "_tabAdvanced": {
+            "type": "panel",
+            "label": "Advanced",
+            "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMTIgMmExMCAxMCAwIDEgMCAxMCAxMEEzMCAxMCAwIDAgMCAxMiAyem0wIDE4YTggOCAwIDEgMSA4LTggOCA4IDAgMCAxLTggOHptMS0xM2gtMnY2bDUuMjUgMy4xNS43NS0xLjIzLTQuNS0yLjY3eiIvPjwvc3ZnPg==",
+            "items": {
+                "snapshotOnMotion": {
+                    "type": "checkbox",
+                    "label": "Auto-capture snapshot on motion",
+                    "default": false,
+                    "help": "Automatically save a JPEG snapshot whenever motion is detected."
+                },
+                "snapshotRetention": {
+                    "type": "number",
+                    "label": "Snapshot retention (hours)",
+                    "default": 24,
+                    "min": 1,
+                    "max": 720,
+                    "help": "Delete snapshots older than this value automatically."
+                },
+                "_divider2": { "type": "divider" },
+                "debugMode": {
+                    "type": "checkbox",
+                    "label": "Verbose logging (debug mode)",
+                    "default": false,
+                    "help": "Log all API calls and raw payloads — useful for troubleshooting. Passwords and tokens remain masked."
+                }
+            }
         }
-      }
-    },
-    "_tabLoxone": {
-      "type": "panel",
-      "label": "Loxone",
-      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMTAgMjB2LTZoNHY2aDV2LThoM0wxMiAzIDIgMTJoM3Y4eiIvPjwvc3ZnPg==",
-      "items": {
-        "loxoneEnabled": {
-          "type": "checkbox",
-          "label": "Enable Loxone integration",
-          "default": false,
-          "help": "Forward camera events directly to Loxone Miniserver via HTTP Virtual Inputs or UDP"
-        },
-        "loxoneHost": {
-          "type": "text",
-          "label": "Miniserver IP address",
-          "placeholder": "192.168.1.10",
-          "hidden": "!data.loxoneEnabled"
-        },
-        "loxonePort": {
-          "type": "number",
-          "label": "HTTP port",
-          "default": 80,
-          "min": 1,
-          "max": 65535,
-          "hidden": "!data.loxoneEnabled"
-        },
-        "loxoneUser": {
-          "type": "text",
-          "label": "Username",
-          "hidden": "!data.loxoneEnabled"
-        },
-        "loxonePassword": {
-          "type": "password",
-          "label": "Password",
-          "hidden": "!data.loxoneEnabled"
-        },
-        "loxoneMode": {
-          "type": "select",
-          "label": "Communication mode",
-          "options": [
-            { "label": "HTTP Virtual Inputs", "value": "http" },
-            { "label": "UDP", "value": "udp" },
-            { "label": "Both (HTTP + UDP)", "value": "both" }
-          ],
-          "default": "http",
-          "hidden": "!data.loxoneEnabled"
-        },
-        "loxoneUdpPort": {
-          "type": "number",
-          "label": "UDP port",
-          "default": 7000,
-          "min": 1,
-          "max": 65535,
-          "hidden": "data.loxoneMode === 'http' || !data.loxoneEnabled"
-        },
-        "_dividerIntercom": {
-          "type": "divider"
-        },
-        "loxoneIntercomEnabled": {
-          "type": "checkbox",
-          "label": "Enable Loxone Intercom integration",
-          "default": false,
-          "hidden": "!data.loxoneEnabled",
-          "help": "When doorbell rings, send RTSP stream URL to a Loxone Virtual Input so the Loxone Touch panel can display the camera feed"
-        },
-        "_loxoneInfo": {
-          "type": "staticText",
-          "label": "",
-          "text": "**Virtual Input naming convention**\n\nCreate these inputs in Loxone Config (names are case-sensitive):\n\n`Reolink_{Name}_Motion` — motion detected\n`Reolink_{Name}_AI_person` — person (AI)\n`Reolink_{Name}_AI_vehicle` — vehicle (AI)\n`Reolink_{Name}_Online` — camera online\n`Reolink_{Name}_Visitor` — doorbell pressed\n`Reolink_{Name}_gate_trigger` — gate trigger pulse\n`Reolink_{Name}_Intercom` — RTSP stream URL on ring (Loxone Intercom)\n\nCustom names can be set per camera in the `loxone` channel of each camera object.",
-          "hidden": "!data.loxoneEnabled",
-          "style": {
-            "marginTop": "16px",
-            "padding": "12px 16px",
-            "backgroundColor": "#f5f5f7",
-            "borderRadius": "8px",
-            "fontSize": "13px",
-            "lineHeight": "1.6"
-          }
-        }
-      }
-    },
-    "_tabWebhook": {
-      "type": "panel",
-      "label": "Webhook",
-      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMTIgMkM2LjQ4IDIgMiA2LjQ4IDIgMTJzNC40OCAxMCAxMCAxMCAxMC00LjQ4IDEwLTEwUzE3LjUyIDIgMTIgMnptLTEgMTVoLTJ2LTZoMnY2em0wLThoLTJWN2gydjJ6Ii8+PC9zdmc+",
-      "items": {
-        "webhookEnabled": {
-          "type": "checkbox",
-          "label": "Enable webhook server",
-          "default": false,
-          "help": "Start a local HTTP server that receives push events from Reolink cameras — no polling needed for doorbell and visitor events"
-        },
-        "go2rtcUrl": {
-          "type": "text",
-          "label": "go2rtc base URL (optional)",
-          "placeholder": "rtsp://192.168.0.201:8554",
-          "help": "If set, Loxone Intercom will receive go2rtc RTSP URLs instead of direct camera URLs. Format: rtsp://ip:8554"
-        },
-        "webhookPort": {
-          "type": "number",
-          "label": "Listen port",
-          "default": 7777,
-          "min": 1024,
-          "max": 65535,
-          "hidden": "!data.webhookEnabled",
-          "help": "Port cameras will POST to — must be reachable from the camera network"
-        },
-        "webhookHost": {
-          "type": "text",
-          "label": "ioBroker IP (visible to cameras)",
-          "placeholder": "192.168.1.100",
-          "hidden": "!data.webhookEnabled",
-          "help": "Used to auto-configure each camera's push URL via SetPushV20. Leave empty to configure manually in the camera web UI."
-        },
-        "_webhookInfo": {
-          "type": "staticText",
-          "label": "",
-          "text": "**How it works**\n\nWhen both IP and port are set, the adapter automatically sets the push URL on each camera at startup (via SetPushV20).\n\nCameras POST to:\n`http://{ioBroker-IP}:{port}/reolink/{CameraName}`\n\nEvents handled: **visitor** (doorbell button), **motion**, **person**, **vehicle**, **animal**.\n\n**Manual setup** — if auto-config fails or firmware is older:\nCamera web UI → Alarm → Push → set URL to the address above.",
-          "hidden": "!data.webhookEnabled",
-          "style": {
-            "marginTop": "16px",
-            "padding": "12px 16px",
-            "backgroundColor": "#f5f5f7",
-            "borderRadius": "8px",
-            "fontSize": "13px",
-            "lineHeight": "1.6"
-          }
-        }
-      }
-    },
-    "_tabAdvanced": {
-      "type": "panel",
-      "label": "Advanced",
-      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMTkuMTQgMTIuOTRjLjA0LS4zLjA2LS42MS4wNi0uOTRzLS4wMi0uNjQtLjA3LS45NGwyLjAzLTEuNThjLjE4LS4xNC4yMy0uNDEuMTItLjYxbC0xLjkyLTMuMzJjLS4xMi0uMjItLjM3LS4yOS0uNTktLjIybC0yLjM5Ljk2Yy0uNS0uMzgtMS4wMy0uNy0xLjYyLS45NGwtLjM2LTIuNTRDMTQuNTYgMi4wOCAxNC4zMiAyIDE0IDJoLTRjLS4yNSAwLS40Ni4xOC0uNDkuNDJsLS4zNiAyLjU0Yy0uNTkuMjQtMS4xMy41Ny0xLjYyLjk0bC0yLjM5LS45NmMtLjIyLS4wOC0uNDcgMC0uNTkuMjJMMi43NCA4Ljg3Yy0uMTIuMjEtLjA4LjQ3LjEyLjYxbDIuMDMgMS41OEMzLjkgMTEuMzYgMy44NiAxMS42OSAzLjg2IDEycy4wMi42NC4wNy45NGwtMi4wMyAxLjU4Yy0uMTguMTQtLjIzLjQxLS4xMi42MWwxLjkyIDMuMzJjLjEyLjIyLjM3LjI5LjU5LjIybDIuMzktLjk2Yy41LjM4IDEuMDMuNyAxLjYyLjk0bC4zNiAyLjU0Yy4wNS4yNC4yNS40MiA0OS40MmguMDFoLTQuMDFjLjI1IDAgLjQ2LS4xOC40OS0uNDJsLjM2LTIuNTRjLjU5LS4yNCAxLjEzLS41NyAxLjYyLS45NGwyLjM5Ljk2Yy4yMi4wOC40NyAwIC41OS0uMjJsMS45Mi0zLjMyYy4xMi0uMjIuMDctLjQ3LS4xMi0uNjFsLTIuMDEtMS41NnpNMTIgMTUuNmMtMS45OCAwLTMuNi0xLjYyLTMuNi0zLjZzMS42Mi0zLjYgMy42LTMuNiAzLjYgMS42MiAzLjYgMy42LTEuNjIgMy42LTMuNiAzLjZ6Ii8+PC9zdmc+",
-      "items": {
-        "snapshotOnMotion": {
-          "type": "checkbox",
-          "label": "Auto-capture snapshot on motion",
-          "default": false,
-          "help": "Automatically save a JPEG snapshot whenever motion is detected"
-        },
-        "snapshotRetention": {
-          "type": "number",
-          "label": "Snapshot retention (hours)",
-          "default": 24,
-          "min": 1,
-          "max": 720,
-          "help": "Delete snapshots older than this value automatically"
-        },
-        "_divider2": {
-          "type": "divider"
-        },
-        "debugMode": {
-          "type": "checkbox",
-          "label": "Verbose logging (debug mode)",
-          "default": false,
-          "help": "Log all API calls and raw payloads — useful for troubleshooting"
-        }
-      }
     }
-  }
 }

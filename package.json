@@ -1,34 +1,37 @@
 {
-    "name": "iobroker.reolink-loxone",
-    "version": "1.3.0",
-    "description": "Reolink camera integration for ioBroker with Loxone bridge support",
+    "name": "iobroker.reolox",
+    "version": "2.0.0",
+    "description": "ReoLox — Reolink camera bridge for ioBroker with first-class Loxone Miniserver integration",
     "author": {
         "name": "Piotr Kalbarczyk",
         "email": "kalbarczyk.piotr@gmail.com"
     },
-    "homepage": "https://github.com/KPIotr89/ioBroker.reolink-loxone",
+    "homepage": "https://github.com/KPIotr89/ioBroker.reolox",
     "license": "MIT",
     "keywords": [
         "ioBroker",
         "reolink",
         "loxone",
+        "reolox",
         "camera",
         "surveillance",
         "CCTV",
         "PTZ",
         "motion detection",
         "AI detection",
+        "doorbell",
         "smart home",
         "home automation",
         "RTSP",
+        "go2rtc",
         "snapshot"
     ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/KPIotr89/ioBroker.reolink-loxone.git"
+        "url": "https://github.com/KPIotr89/ioBroker.reolox.git"
     },
     "bugs": {
-        "url": "https://github.com/KPIotr89/ioBroker.reolink-loxone/issues"
+        "url": "https://github.com/KPIotr89/ioBroker.reolox/issues"
     },
     "main": "main.js",
     "files": [
@@ -36,7 +39,9 @@
         "lib/",
         "main.js",
         "io-package.json",
-        "LICENSE"
+        "LICENSE",
+        "README.md",
+        "CHANGELOG.md"
     ],
     "dependencies": {
         "@iobroker/adapter-core": "^3.1.0",
@@ -53,6 +58,7 @@
         "chai-as-promised": "^7.1.0",
         "eslint": "^8.57.0",
         "mocha": "^10.7.0",
+        "nock": "^13.5.0",
         "sinon": "^18.0.0",
         "sinon-chai": "^3.7.0"
     },
@@ -60,11 +66,10 @@
         "node": ">=18.0.0"
     },
     "scripts": {
-        "test:js": "mocha --config test/mocharc.yml \"{!(node_modules|test)/**/*.test.js,*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
+        "test:unit": "mocha --recursive test/unit --exit",
         "test:package": "mocha test/package --exit",
         "test:integration": "mocha test/integration --exit",
-        "test": "npm run test:js && npm run test:package",
-        "check": "tsc --noEmit -p tsconfig.check.json",
+        "test": "npm run test:unit && npm run test:package",
         "lint": "eslint ."
     }
 }
