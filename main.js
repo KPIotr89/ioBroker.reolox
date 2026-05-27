@@ -279,6 +279,23 @@ class ReoLoxAdapter extends utils.Adapter {
         try { await api.getDoorbell(); caps.doorbell = true; caps.visitor = true; }
         catch (_) { caps.doorbell = false; }
 
+        // Always probe GetAiState — Reolink misreports aiTrack.ver on CX-series.
+        // If any AI type is supported per-type, we'll discover that during polling
+        // (caps.aiDetection here is informational only).
+        if (!caps.aiDetection) {
+            try {
+                const aiState = await api.getAiState();
+                const ai = (aiState && aiState.AiState) || aiState || {};
+                if ((ai.people && ai.people.support === 1)
+                    || (ai.vehicle && ai.vehicle.support === 1)
+                    || (ai.dog_cat && ai.dog_cat.support === 1)
+                    || (ai.face && ai.face.support === 1)) {
+                    caps.aiDetection = true;
+                    this.log.debug(`Camera "${camId}": AI confirmed via GetAiState probe`);
+                }
+            } catch (_) { /* AI not available — leave caps.aiDetection=false */ }
+        }
+
         this.capabilities.set(camId, caps);
         this.log.info(`Camera "${camId}" caps: PTZ=${caps.ptz} WhiteLED=${caps.whiteLed} Siren=${caps.siren} AI=${caps.aiDetection} Visitor=${caps.visitor} Doorbell=${caps.doorbell}`);
     }
@@ -435,26 +452,27 @@ class ReoLoxAdapter extends utils.Adapter {
                 await this._handleWhiteLedSample(camId, ch).catch((e) => this.log.debug(`WhiteLed poll failed for ${camId}: ${sanitize(e.message)}`));
             }
 
-            // AI
-            if (this._hasCapability(camId, 'aiDetection')) {
-                try {
-                    const aiState = await api.getAiState(ch);
-                    const ai = (aiState && aiState.AiState) || aiState || {};
-                    const map = {
-                        person: !!(ai.people && ai.people.alarm_state),
-                        vehicle: !!(ai.vehicle && ai.vehicle.alarm_state),
-                        animal: !!(ai.dog_cat && ai.dog_cat.alarm_state),
-                        face: !!(ai.face && ai.face.alarm_state),
-                    };
-                    for (const [type, detected] of Object.entries(map)) {
-                        await this._emitChange(camId, `ai_${type}`, detected, async () => {
-                            await this.setStateAsync(`${camId}.status.${type}Detected`, detected, true);
-                            if (this.loxoneBridge) await this.loxoneBridge.sendAi(camConfig.name || camId, type, detected);
-                        });
-                    }
-                } catch (e) {
-                    this.log.debug(`AI poll failed for ${camId}: ${sanitize(e.message)}`);
+            // AI — always probe. Reolink GetAbility reports aiTrack.ver=0 on CX-series
+            // even when the firmware supports AI; the truth is in `support` per type.
+            try {
+                const aiState = await api.getAiState(ch);
+                const ai = (aiState && aiState.AiState) || aiState || {};
+                const typeMap = {
+                    person: ai.people,
+                    vehicle: ai.vehicle,
+                    animal: ai.dog_cat,
+                    face: ai.face,
+                };
+                for (const [type, data] of Object.entries(typeMap)) {
+                    if (!data || data.support === 0) continue;        // camera doesn't support this type
+                    const detected = !!(data.alarm_state === 1 || data.alarm_state === true);
+                    await this._emitChange(camId, `ai_${type}`, detected, async () => {
+                        await this.setStateAsync(`${camId}.status.${type}Detected`, detected, true);
+                        if (this.loxoneBridge) await this.loxoneBridge.sendAi(camConfig.name || camId, type, detected);
+                    });
                 }
+            } catch (e) {
+                this.log.debug(`AI poll failed for ${camId}: ${sanitize(e.message)}`);
             }
 
             // Doorbell (physical button press)
