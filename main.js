@@ -442,39 +442,10 @@ class ReoLoxAdapter extends utils.Adapter {
 
         let connected = true;
         try {
-            // Motion
-            try {
-                const mdState = await api.getMdState(ch);
-                const motion = !!(mdState && (mdState.state || (mdState.MdState && mdState.MdState.state)));
-                this.log.debug(`[poll] motion ${camId} = ${motion} (raw: ${JSON.stringify(mdState)})`);
-                await this._emitChange(camId, 'motion', motion, async () => {
-                    await this.setStateAsync(`${camId}.status.motionDetected`, motion, true);
-                    if (motion) await this.setStateAsync(`${camId}.status.lastMotionTime`, Date.now(), true);
-                    if (this.loxoneBridge) await this.loxoneBridge.sendMotion(camConfig.name || camId, motion);
-                });
-                // Sanity: warn once per 10 min if motion stays 0 for >5min — camera probably has Motion Detection disabled
-                if (!motion) {
-                    const key = `${camId}.motionSilenceStart`;
-                    const start = this.lastStates.get(key) || Date.now();
-                    if (!this.lastStates.has(key)) this.lastStates.set(key, start);
-                    if (Date.now() - start > 5 * 60 * 1000 && Date.now() - (this.lastStates.get(`${camId}.motionSilenceWarn`) || 0) > 10 * 60 * 1000) {
-                        this.log.warn(`Camera "${camId}": GetMdState has reported 0 for >5 min — enable Motion Detection in the camera web UI (Surveillance → Motion Detection → Enable) or verify the user has Admin role.`);
-                        this.lastStates.set(`${camId}.motionSilenceWarn`, Date.now());
-                    }
-                } else {
-                    this.lastStates.delete(`${camId}.motionSilenceStart`);
-                }
-            } catch (e) {
-                this.log.debug(`Motion poll failed for ${camId}: ${sanitize(e.message)}`);
-            }
-
-            // WhiteLed (only here if there's no fast-poll task already covering it)
-            if (this._hasCapability(camId, 'whiteLed') && !this.scheduler.has(`wl:${camId}`)) {
-                await this._handleWhiteLedSample(camId, ch).catch((e) => this.log.debug(`WhiteLed poll failed for ${camId}: ${sanitize(e.message)}`));
-            }
-
-            // AI — always probe. Reolink GetAbility reports aiTrack.ver=0 on CX-series
-            // even when the firmware supports AI; the truth is in `support` per type.
+            // AI-only motion. GetMdState (classic motion) is intentionally not used —
+            // it is unreliable on CX-series and effectively replaced by AI detection.
+            // Motion VI fires whenever AI sees a person/vehicle/animal/face.
+            let aiAny = false;
             try {
                 const aiState = await api.getAiState(ch);
                 const ai = (aiState && aiState.AiState) || aiState || {};
@@ -486,8 +457,9 @@ class ReoLoxAdapter extends utils.Adapter {
                     face: ai.face,
                 };
                 for (const [type, data] of Object.entries(typeMap)) {
-                    if (!data || data.support === 0) continue;        // camera doesn't support this type
+                    if (!data || data.support === 0) continue;
                     const detected = !!(data.alarm_state === 1 || data.alarm_state === true);
+                    if (detected) aiAny = true;
                     await this._emitChange(camId, `ai_${type}`, detected, async () => {
                         await this.setStateAsync(`${camId}.status.${type}Detected`, detected, true);
                         if (this.loxoneBridge) await this.loxoneBridge.sendAi(camConfig.name || camId, type, detected);
@@ -496,6 +468,20 @@ class ReoLoxAdapter extends utils.Adapter {
             } catch (e) {
                 this.log.debug(`AI poll failed for ${camId}: ${sanitize(e.message)}`);
             }
+
+            // Motion = any AI detection
+            await this._emitChange(camId, 'motion', aiAny, async () => {
+                await this.setStateAsync(`${camId}.status.motionDetected`, aiAny, true);
+                if (aiAny) await this.setStateAsync(`${camId}.status.lastMotionTime`, Date.now(), true);
+                if (this.loxoneBridge) await this.loxoneBridge.sendMotion(camConfig.name || camId, aiAny);
+            });
+
+            // WhiteLed (only here if there's no fast-poll task already covering it)
+            if (this._hasCapability(camId, 'whiteLed') && !this.scheduler.has(`wl:${camId}`)) {
+                await this._handleWhiteLedSample(camId, ch).catch((e) => this.log.debug(`WhiteLed poll failed for ${camId}: ${sanitize(e.message)}`));
+            }
+
+
 
             // Doorbell (physical button press). Skipped entirely if the user
             // marked the camera as doorbell explicitly (webhook handles it).
