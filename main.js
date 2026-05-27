@@ -329,7 +329,6 @@ class ReoLoxAdapter extends utils.Adapter {
         await this._state(camId, 'streams.rtspSubPublic', 'RTSP sub URL (no credentials)', 'string', 'url', '', false);
         // Snapshot via adapter proxy: triggers `control.snapshot` and re-uses the saved JPEG.
         await this._state(camId, 'streams.snapshotProxy', 'Snapshot file path (refreshed by control.snapshot)', 'string', 'text', '', false);
-        await this._state(camId, 'streams.go2rtcMjpeg', 'MJPEG URL via go2rtc (if configured)', 'string', 'url', '', false);
 
         await this._channel(camId, 'control', 'Camera Control');
         await this._state(camId, 'control.snapshot', 'Trigger snapshot capture', 'boolean', 'button', false, true);
@@ -406,11 +405,6 @@ class ReoLoxAdapter extends utils.Adapter {
         await this.setStateAsync(`${camId}.streams.rtspSubPublic`, api.rtspUrlPublic(ch, 'sub'), true);
         // Where snapshots land — no credentials in this string.
         await this.setStateAsync(`${camId}.streams.snapshotProxy`, path.join(this.getDataDir(), 'snapshots', `${camId}.jpg`), true);
-        if (this.config.go2rtcUrl) {
-            const base = this.config.go2rtcUrl.replace(/\/+$/, '');
-            // go2rtc HTTP MJPEG endpoint
-            await this.setStateAsync(`${camId}.streams.go2rtcMjpeg`, `${base.replace(/^rtsp:/, 'http:').replace(/:8554$/, ':1984')}/api/stream.mjpeg?src=${encodeURIComponent(camId)}`, true);
-        }
     }
 
     // ─── POLLING ──────────────────────────────────────────────────────────
@@ -615,13 +609,8 @@ class ReoLoxAdapter extends utils.Adapter {
                     if (this.config.loxoneIntercomEnabled) {
                         let streamUrl = '';
                         if (active) {
-                            const go2rtcBase = (this.config.go2rtcUrl || '').replace(/\/+$/, '');
-                            if (go2rtcBase) {
-                                streamUrl = `${go2rtcBase}/${encodeURIComponent(camId)}`;
-                            } else {
-                                const api = this.cameras.get(camId);
-                                streamUrl = api ? api.rtspUrlPublic(camConfig.channel || 0, 'main') : '';
-                            }
+                            const api = this.cameras.get(camId);
+                            streamUrl = api ? api.rtspUrlPublic(camConfig.channel || 0, 'main') : '';
                         }
                         await this.loxoneBridge.sendCustom(camConfig.name || camId, 'intercom', active ? (streamUrl || 1) : 0);
                     }

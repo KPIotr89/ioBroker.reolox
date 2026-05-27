@@ -31,7 +31,6 @@ ReoLox connects every Reolink camera in your home to ioBroker and Loxone. No clo
 
 **Gate trigger over WhiteLed**: a brief `≤3 s` ON→OFF flash from the Reolink app sends `gate_trigger=1` to Loxone. Useful for opening a gate when the camera owner is approaching.
 
-**go2rtc-ready**: optional re-stream URL so Loxone Intercom and Touch panels can show MJPEG without burning credentials.
 
 **Auto-discovery**: the Admin panel finds Reolink cameras via ONVIF WS-Discovery in seconds.
 
@@ -95,18 +94,6 @@ v2.0 is a breaking rename. **State paths change** (`reolink-loxone.0.*` → `reo
 4. In **Loxone Config**, search-and-replace `Reolink_` → `ReoLox_` across your VI names (or set `loxoneViPrefix = "Reolink"` in ReoLox to keep the old prefix).
 5. Once the new instance is healthy, remove the old one (`iobroker del reolink-loxone.0`).
 
-## go2rtc integration
-
-ReoLox does not embed go2rtc; pair it with a separate instance for re-streaming. Example `/etc/go2rtc/go2rtc.yaml`:
-
-```yaml
-streams:
-  front: rtsp://loxone:loxone123@192.168.0.48:554/h264Preview_01_main
-  taras: rtsp://loxone:loxone123@192.168.0.49:554/h264Preview_01_main
-  garaz: rtsp://loxone:loxone123@192.168.0.61:554/h264Preview_01_main
-```
-
-Then in the ReoLox Webhook tab set `go2rtc base URL` to `rtsp://<ip>:8554`. On doorbell ring the bridge will send `rtsp://<ip>:8554/<camera>` to the Intercom VI.
 
 ## Service commands
 

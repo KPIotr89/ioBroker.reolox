@@ -277,12 +277,6 @@
                     "hidden": "!data.webhookEnabled",
                     "help": "`auto` = accept only the IPs of cameras configured in the Cameras tab. Otherwise comma-separated IPs (e.g. `192.168.0.48, 192.168.0.49`)."
                 },
-                "go2rtcUrl": {
-                    "type": "text",
-                    "label": "go2rtc base URL (optional)",
-                    "placeholder": "rtsp://192.168.0.201:8554",
-                    "help": "If set, Loxone Intercom will receive go2rtc RTSP URLs instead of direct camera URLs. Format: rtsp://ip:8554"
-                },
                 "_webhookInfo": {
                     "type": "staticText",
                     "label": "",

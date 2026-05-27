@@ -9,9 +9,9 @@
             "pl": "ReoLox — most Reolink ↔ Loxone"
         },
         "desc": {
-            "en": "Reolink camera integration for ioBroker with direct Loxone Miniserver bridge. Motion / AI detection, doorbell push, PTZ, snapshots, RTSP via go2rtc, whiteLed knock gate trigger.",
-            "de": "Reolink-Kamera-Integration für ioBroker mit direkter Loxone-Miniserver-Brücke. Bewegungs- und KI-Erkennung, Türklingel-Push, PTZ, Schnappschüsse, RTSP über go2rtc.",
-            "pl": "Integracja kamer Reolink dla ioBroker z bezposrednim mostem do Loxone Miniserver. Detekcja ruchu i AI, push dzwonka, PTZ, snapshoty, RTSP przez go2rtc, gate trigger przez mrugniecie WhiteLed."
+            "en": "Reolink camera integration for ioBroker with direct Loxone Miniserver bridge. Motion / AI detection, doorbell push, PTZ, snapshots, whiteLed knock gate trigger.",
+            "de": "Reolink-Kamera-Integration für ioBroker mit direkter Loxone-Miniserver-Brücke. Bewegungs- und KI-Erkennung, Türklingel-Push, PTZ, Schnappschüsse.",
+            "pl": "Integracja kamer Reolink dla ioBroker z bezposrednim mostem do Loxone Miniserver. Detekcja ruchu i AI, push dzwonka, PTZ, snapshoty, gate trigger przez mrugniecie WhiteLed."
         },
         "authors": [
             "Piotr Kalbarczyk <kalbarczyk.piotr@gmail.com>"
@@ -27,7 +27,6 @@
             "motion",
             "AI",
             "doorbell",
-            "go2rtc",
             "smart home"
         ],
         "license": "MIT",
@@ -117,7 +116,6 @@
         "webhookHost": "",
         "webhookSharedSecret": "",
         "webhookIpAllowlist": "auto",
-        "go2rtcUrl": "",
         "snapshotOnMotion": false,
         "snapshotRetention": 24,
         "capabilityCacheTtlHours": 24,

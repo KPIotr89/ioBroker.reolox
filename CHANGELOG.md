@@ -15,7 +15,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **`safe-log`** helpers (`sanitize`, `mask`, `maskUrl`) — passwords, tokens and CRLF can no longer appear in logs.
 - Configurable Loxone VI prefix (`loxoneViPrefix`, default `ReoLox`).
 - Per-camera `<camId>.loxone.vi*` read-only states showing the exact Virtual Input names ReoLox will send to.
-- Public credential-free stream states (`streams.rtspMainPublic`, `streams.rtspSubPublic`, `streams.go2rtcMjpeg`).
+- Public credential-free stream states (`streams.rtspMainPublic`, `streams.rtspSubPublic`).
 - Unit tests for `parseReolinkPushPayload`, `safe-log`, `TimerManager`, `PollScheduler`, `LoxoneBridge.inputName`, `WebhookServer` (HTTP integration), `CapabilityCache`, `ReolinkAPI` (with `nock`).
 
 ### Changed
