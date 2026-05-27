@@ -446,11 +446,24 @@ class ReoLoxAdapter extends utils.Adapter {
             try {
                 const mdState = await api.getMdState(ch);
                 const motion = !!(mdState && (mdState.state || (mdState.MdState && mdState.MdState.state)));
+                this.log.debug(`[poll] motion ${camId} = ${motion} (raw: ${JSON.stringify(mdState)})`);
                 await this._emitChange(camId, 'motion', motion, async () => {
                     await this.setStateAsync(`${camId}.status.motionDetected`, motion, true);
                     if (motion) await this.setStateAsync(`${camId}.status.lastMotionTime`, Date.now(), true);
                     if (this.loxoneBridge) await this.loxoneBridge.sendMotion(camConfig.name || camId, motion);
                 });
+                // Sanity: warn once per 10 min if motion stays 0 for >5min — camera probably has Motion Detection disabled
+                if (!motion) {
+                    const key = `${camId}.motionSilenceStart`;
+                    const start = this.lastStates.get(key) || Date.now();
+                    if (!this.lastStates.has(key)) this.lastStates.set(key, start);
+                    if (Date.now() - start > 5 * 60 * 1000 && Date.now() - (this.lastStates.get(`${camId}.motionSilenceWarn`) || 0) > 10 * 60 * 1000) {
+                        this.log.warn(`Camera "${camId}": GetMdState has reported 0 for >5 min — enable Motion Detection in the camera web UI (Surveillance → Motion Detection → Enable) or verify the user has Admin role.`);
+                        this.lastStates.set(`${camId}.motionSilenceWarn`, Date.now());
+                    }
+                } else {
+                    this.lastStates.delete(`${camId}.motionSilenceStart`);
+                }
             } catch (e) {
                 this.log.debug(`Motion poll failed for ${camId}: ${sanitize(e.message)}`);
             }
@@ -465,6 +478,7 @@ class ReoLoxAdapter extends utils.Adapter {
             try {
                 const aiState = await api.getAiState(ch);
                 const ai = (aiState && aiState.AiState) || aiState || {};
+                this.log.debug(`[poll] AI ${camId} raw: ${JSON.stringify(ai)}`);
                 const typeMap = {
                     person: ai.people,
                     vehicle: ai.vehicle,

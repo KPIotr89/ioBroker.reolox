@@ -84,7 +84,7 @@
     },
     "native": {
         "cameras": [],
-        "defaultPollInterval": 5,
+        "defaultPollInterval": 1,
         "loxoneEnabled": false,
         "loxoneHost": "",
         "loxonePort": 80,

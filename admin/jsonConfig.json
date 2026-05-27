@@ -79,7 +79,7 @@
                             "type": "number",
                             "attr": "pollInterval",
                             "label": "Poll s",
-                            "default": 5,
+                            "default": 1,
                             "min": 1,
                             "max": 300,
                             "width": "65px",
@@ -132,7 +132,7 @@
                 "defaultPollInterval": {
                     "type": "number",
                     "label": "Default poll interval (seconds)",
-                    "default": 5,
+                    "default": 1,
                     "min": 1,
                     "max": 300,
                     "help": "Fallback interval for cameras with no custom interval set"
