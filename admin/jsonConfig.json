@@ -110,8 +110,6 @@
                     "label": "🔍 Discover Reolink cameras on network",
                     "jsonData": "{\"timeout\":5000}",
                     "showProcess": true,
-                    "error": "error",
-                    "result": "result",
                     "style": { "marginBottom": "12px" }
                 },
                 "_cameraHelp": {
@@ -236,7 +234,7 @@
                     "label": "📋 Generate VI list for my cameras",
                     "showProcess": true,
                     "useNative": true,
-                    "result": "loxoneVIList",
+                    "result": { "loxoneVIList": "result" },
                     "hidden": "!data.loxoneEnabled",
                     "style": { "marginTop": "8px", "marginBottom": "8px" }
                 },

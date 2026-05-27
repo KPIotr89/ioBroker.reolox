@@ -17,6 +17,7 @@ const GATE_TRIGGER_WINDOW_MS = 3000;
 const GATE_TRIGGER_PULSE_MS = 1000;
 const VISITOR_PULSE_MS = 1000;
 const USER_WRITE_DEBOUNCE_MS = 3000;
+const HEARTBEAT_INTERVAL_MS = 60_000;  // Periodic Online refresh to Loxone
 
 /**
  * ReoLox — Reolink ↔ Loxone integration adapter for ioBroker.
@@ -492,7 +493,10 @@ class ReoLoxAdapter extends utils.Adapter {
                     await this._emitChange(camId, 'doorbell', ringing, async () => {
                         await this.setStateAsync(`${camId}.status.doorbellRing`, ringing, true);
                         await this.setStateAsync(`${camId}.status.visitorDetected`, ringing, true);
-                        if (this.loxoneBridge) await this.loxoneBridge.sendCustom(camConfig.name || camId, 'Visitor', ringing ? 1 : 0);
+                        if (this.loxoneBridge) {
+                            await this.loxoneBridge.sendCustom(camConfig.name || camId, 'Visitor', ringing ? 1 : 0);
+                            await this.loxoneBridge.sendCustom(camConfig.name || camId, 'doorbellRing', ringing ? 1 : 0);
+                        }
                     });
                 } catch (e) {
                     this.log.debug(`Doorbell poll failed for ${camId}: ${sanitize(e.message)}`);
@@ -504,9 +508,17 @@ class ReoLoxAdapter extends utils.Adapter {
         }
 
         await this.setStateAsync(`${camId}.info.connection`, connected, true);
-        await this._emitChange(camId, 'online', connected, async () => {
+        // Online to Loxone: emit on change OR refresh every HEARTBEAT_INTERVAL_MS even when unchanged
+        // (so a Loxone Miniserver restart can't leave the VI on stale 0 indefinitely).
+        const lastBeatKey = `${camId}.onlineHeartbeat`;
+        const lastBeatAt = this.lastStates.get(lastBeatKey) || 0;
+        const stateChanged = this.lastStates.get(`${camId}.online`) !== connected;
+        const due = Date.now() - lastBeatAt >= HEARTBEAT_INTERVAL_MS;
+        if (stateChanged || due) {
+            this.lastStates.set(`${camId}.online`, connected);
+            this.lastStates.set(lastBeatKey, Date.now());
             if (this.loxoneBridge) await this.loxoneBridge.sendStatus(camConfig.name || camId, connected);
-        });
+        }
     }
 
     async _pollWhiteLed(camId) {
@@ -637,6 +649,7 @@ class ReoLoxAdapter extends utils.Adapter {
                 await this.setStateAsync(`${camId}.status.doorbellRing`, active, true);
                 if (this.loxoneBridge) {
                     await this.loxoneBridge.sendCustom(camConfig.name || camId, 'Visitor', active ? 1 : 0);
+                    await this.loxoneBridge.sendCustom(camConfig.name || camId, 'doorbellRing', active ? 1 : 0);
                     if (this.config.loxoneIntercomEnabled) {
                         let streamUrl = '';
                         if (active) {
