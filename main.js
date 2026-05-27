@@ -611,8 +611,12 @@ class ReoLoxAdapter extends utils.Adapter {
 
         for (const evt of events.list) {
             const isVisitor = ['visitor', 'doorbell', 'ring'].includes(evt.type);
-            await this._applyWebhookEvent(resolvedId, camConfig, evt.type, evt.active);
-            if (isVisitor && evt.active) {
+            // Reolink Doorbell PoE v3.0.0.4662 only fires alarm_state=0 (release event), no press.
+            // For cameras explicitly marked as doorbell, treat any visitor webhook as a button press pulse.
+            const forcePulse = isVisitor && camConfig.isDoorbell;
+            const active = forcePulse ? true : evt.active;
+            await this._applyWebhookEvent(resolvedId, camConfig, evt.type, active);
+            if ((isVisitor && active) || forcePulse) {
                 this.timers.setTimeout(
                     () => this._applyWebhookEvent(resolvedId, camConfig, evt.type, false).catch(() => undefined),
                     VISITOR_PULSE_MS,
