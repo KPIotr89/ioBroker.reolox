@@ -9,9 +9,9 @@
             "pl": "ReoLox — most Reolink ↔ Loxone"
         },
         "desc": {
-            "en": "Reolink camera integration for ioBroker with direct Loxone Miniserver bridge. Motion / AI detection, doorbell push, PTZ, snapshots, whiteLed knock gate trigger.",
-            "de": "Reolink-Kamera-Integration für ioBroker mit direkter Loxone-Miniserver-Brücke. Bewegungs- und KI-Erkennung, Türklingel-Push, PTZ, Schnappschüsse.",
-            "pl": "Integracja kamer Reolink dla ioBroker z bezposrednim mostem do Loxone Miniserver. Detekcja ruchu i AI, push dzwonka, PTZ, snapshoty, gate trigger przez mrugniecie WhiteLed."
+            "en": "Reolink camera integration for ioBroker with direct Loxone Miniserver bridge. Motion and AI detection, doorbell push, PTZ, snapshots, WhiteLed knock-pattern gate trigger.",
+            "de": "Reolink-Kamera-Integration fuer ioBroker mit direkter Loxone-Miniserver-Bruecke. Bewegungs- und KI-Erkennung, Tuerklingel-Push, PTZ, Schnappschuesse, WhiteLed-Knock-Pattern als Tor-Trigger.",
+            "pl": "Integracja kamer Reolink dla ioBroker z bezposrednim mostem do Loxone Miniserver. Detekcja ruchu i AI, push dzwonka, PTZ, snapshoty, mrugniecie WhiteLed jako trigger bramy."
         },
         "authors": [
             "Piotr Kalbarczyk <kalbarczyk.piotr@gmail.com>"
@@ -76,25 +76,9 @@
         "messagebox": true,
         "news": {
             "2.0.0": {
-                "en": "BREAKING — rebrand to ReoLox (iobroker.reolox). Loxone VI prefix changes from Reolink_* to ReoLox_*. Old instance must be removed before installing. Security hardening: encrypted passwords, webhook IP allowlist + shared secret + body limit, Loxone Token Auth (HMAC), credentials removed from public states. Stability: PollScheduler with jitter and singleflight login, tracked timers (clean shutdown), capability cache on disk, exponential backoff. New: snapshot endpoint without credentials, /reolox/{cam} webhook path, configurable VI prefix, unit tests.",
-                "de": "BREAKING — Rebranding zu ReoLox (iobroker.reolox). Loxone-VI-Präfix ändert sich von Reolink_* zu ReoLox_*. Alte Instanz muss entfernt werden. Sicherheits-Hardening, Stabilitäts-Verbesserungen, Unit-Tests.",
-                "pl": "BREAKING — rebranding na ReoLox (iobroker.reolox). Prefix VI w Loxone zmienia sie z Reolink_* na ReoLox_*. Stara instancja musi byc usunieta przed instalacja. Hardening bezpieczenstwa: szyfrowane hasla, webhook z allowlist IP + shared secret + body limit, Loxone Token Auth (HMAC), brak credentiali w publicznych stanach. Stabilnosc: PollScheduler z jitterem i singleflight login, tracked timery (czyste zamkniecie), cache capabilities na dysku, exponential backoff. Nowe: snapshot endpoint bez credentiali, sciezka webhooka /reolox/{cam}, konfigurowalny prefix VI, testy jednostkowe."
-            },
-            "1.3.0": {
-                "en": "WhiteLed knock-pattern gate trigger: brief flash (≤3s ON→OFF) detected via Reolink app sends gate_trigger event to Loxone",
-                "pl": "Wykrywanie mrugnięcia WhiteLed jako trigger bramy: krótki błysk (≤3s) z aplikacji Reolink wysyła zdarzenie gate_trigger do Loxone"
-            },
-            "1.2.0": {
-                "en": "Fix SetWhiteLed: read current config from camera, ledControl permission detection, WhiteLed state polling",
-                "pl": "Naprawa SetWhiteLed: odczyt konfiguracji z kamery, wykrywanie uprawnien ledControl, polling stanu WhiteLed"
-            },
-            "1.1.0": {
-                "en": "Capability detection (GetAbility): adapter auto-detects WhiteLed/PTZ/Siren support",
-                "pl": "Wykrywanie mozliwosci (GetAbility): adapter auto-wykrywa WhiteLed/PTZ/Siren"
-            },
-            "1.0.0": {
-                "en": "Initial release - Full Reolink API support with Loxone bridge",
-                "pl": "Pierwsza wersja - Pelne wsparcie API Reolink z mostem Loxone"
+                "en": "Initial release. Full Reolink HTTP API + direct Loxone bridge (Token Auth or UDP). Push webhook with IP allowlist, shared secret and 64 KB body cap. WhiteLed knock-pattern gate trigger. Loxone Intercom on doorbell ring. ONVIF auto-discovery. Capability cache on disk. 53 unit tests, cross-platform CI.",
+                "de": "Erstveroeffentlichung. Vollstaendige Reolink HTTP API + direkte Loxone-Bruecke (Token Auth oder UDP). Push-Webhook mit IP-Allowlist, Shared Secret und 64 KB Body-Cap. WhiteLed-Knock-Pattern als Tor-Trigger. Loxone Intercom beim Klingeln. ONVIF Auto-Discovery. Capability-Cache auf Platte. 53 Unit-Tests, plattformuebergreifendes CI.",
+                "pl": "Pierwsza wersja. Pelne wsparcie Reolink HTTP API + bezposredni most do Loxone (Token Auth lub UDP). Webhook z allowlist IP, shared secret i limitem body 64 KB. Wykrywanie mrugniecia WhiteLed jako triggera bramy. Loxone Intercom przy dzwonku. Auto-wyszukiwanie ONVIF. Cache capabilities na dysku. 53 testy jednostkowe, CI cross-platform."
             }
         }
     },
