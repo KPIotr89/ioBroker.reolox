@@ -2,6 +2,25 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] — 2026-05-28
+
+### Added
+- **Standalone camera control** (Phase 1) under `reolox.0.<cam>.control.*`: front status LED (PowerLed), SD recording, master push + per-type push (motion / person / vehicle / animal / visitor), WhiteLed on/off + brightness + mode, OSD overlay text and date/time, motion-detection sensitivity, audio-alarm duration and sound.
+- **NVR per-channel control** (Phase 2) under `reolox.0.<nvr>.chN.control.*`: recording, motion-detection, AI-detection (master) and push toggles, with initial state synced from the NVR at startup.
+
+### Changed
+- **WhiteLed on/off** now sends the minimal `SetWhiteLed` payload (`channel` + `state` only) instead of the full config object. CX810/CX820 reject the full payload (`LightingSchedule` / `mode=1`) with `rspCode=-13`; brightness and mode are left untouched.
+- **State subscription narrowed** to `*.control.*`, `*.ptz.*`, `*.image.*` — read-only `info` / `status` / `streams` states no longer raise redundant change events.
+
+### Fixed
+- **Standalone offline detection**: a camera that stops responding now correctly reports `info.connection = false` and `Online = 0` to Loxone. Previously every per-command failure was swallowed and the connection flag stayed `true`, so a dead camera looked online indefinitely.
+- **NVR token expiry**: `_batchCmd` re-logins once on `rspCode = -6` / HTTP 401 (these surface per-entry in a batch, not as an exception). A batch that still returns no valid entries now marks the NVR offline instead of silently reporting every channel quiet with `Online = 1`.
+- **Capability cache** is now firmware-aware: a changed `firmVer` invalidates the cached `GetAbility`, so a firmware upgrade can no longer pin stale capabilities for the whole TTL.
+- **Loxone VI generator** derives the NVR id the same way as the init path (`cam_<host>` fallback), so unnamed NVR rows no longer get stuck on "restart adapter, then click Generate again".
+
+### Removed
+- Unused **Advanced tab** options that were present in the UI/README but never implemented: *Auto-capture snapshot on motion*, *Snapshot retention*, *Verbose logging (debug mode)*. On-demand snapshot capture via `control.snapshot` is unchanged.
+
 ## [2.1.0] — 2026-05-28
 
 ### Added

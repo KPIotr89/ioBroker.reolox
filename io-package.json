@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.1.0",
+        "version": "2.2.0",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -75,6 +75,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.2.0": {
+                "en": "Camera control (Phase 1): status LED, recording, master + per-type push, WhiteLed on/off/brightness/mode, OSD, motion sensitivity, audio alarm. NVR per-channel control (Phase 2): recording, motion, AI, push under <nvr>.chN.control.*. Fixes: WhiteLed on/off uses the minimal CX-series payload; standalone offline detection (Online no longer stuck on 1); NVR batch re-login on token expiry; capability cache invalidates on firmware change. Removed unused Advanced options (snapshot on motion, retention, debug mode).",
+                "de": "Kamerasteuerung (Phase 1): Status-LED, Aufnahme, Master- und Typ-Push, WhiteLed An/Aus/Helligkeit/Modus, OSD, Bewegungsempfindlichkeit, Audio-Alarm. NVR-Steuerung pro Kanal (Phase 2): Aufnahme, Bewegung, KI, Push unter <nvr>.chN.control.*. Fixes: WhiteLed An/Aus mit minimalem CX-Payload; Offline-Erkennung Standalone (Online nicht mehr auf 1 haengen); NVR-Batch-Re-Login bei Token-Ablauf; Capability-Cache invalidiert bei Firmware-Wechsel. Entfernt: ungenutzte Advanced-Optionen (Snapshot bei Bewegung, Retention, Debug-Modus).",
+                "pl": "Sterowanie kamera (Phase 1): dioda statusu, nagrywanie, push master i per typ, WhiteLed on/off/jasnosc/tryb, OSD, czulosc ruchu, alarm dzwiekowy. Sterowanie NVR per kanal (Phase 2): nagrywanie, ruch, AI, push pod <nvr>.chN.control.*. Poprawki: WhiteLed on/off uzywa minimalnego payloadu CX; detekcja offline standalone (Online nie zostaje na 1); re-login batcha NVR przy wygasnieciu tokenu; cache capabilities invalidowany przy zmianie firmware. Usunieto nieuzywane opcje Advanced (snapshot na ruchu, retencja, tryb debug)."
+            },
             "2.1.0": {
                 "en": "NVR support (Reolink RLN8/RLN16/RLN36): per-channel polling, state tree under <nvr>.chN.*, batch GetMdState+GetAiState in one HTTP request. New per-row flags isDoorbell (forces visitor capability), isNvr (NVR mode), pushToLoxone (silence duplicate VIs). VI list generator expands NVR rows into per-channel entries. Online heartbeat every 60 s. AI-only motion (drop GetMdState polling). Active doorbellRing pulse. Auth retry on rspCode -6 in error nest. Default poll interval 1 s.",
                 "de": "NVR-Unterstützung (Reolink RLN8/RLN16/RLN36): Per-Kanal-Polling, State-Tree unter <nvr>.chN.*, batch GetMdState+GetAiState in einer HTTP-Anfrage. Neue Flags pro Zeile: isDoorbell, isNvr, pushToLoxone. VI-Listengenerator erweitert NVR-Zeilen um Per-Kanal-Einträge. Online-Heartbeat alle 60 s. KI-only-Motion. Aktive doorbellRing-Pulse. Auth-Retry bei rspCode -6 verschachtelt. Standard-Poll-Intervall 1 s.",
@@ -105,10 +110,7 @@
         "webhookHost": "",
         "webhookSharedSecret": "",
         "webhookIpAllowlist": "auto",
-        "snapshotOnMotion": false,
-        "snapshotRetention": 24,
         "capabilityCacheTtlHours": 24,
-        "debugMode": false,
         "loxoneVIList": [],
         "discoveredCameras": []
     },

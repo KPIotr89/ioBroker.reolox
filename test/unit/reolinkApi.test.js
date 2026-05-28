@@ -92,4 +92,39 @@ describe('ReolinkAPI', () => {
         expect(info).to.have.property('DevInfo');
         expect(loginCount).to.be.at.least(2);
     });
+
+    it('_batchCmd re-logins once when the batch returns rspCode -6', async () => {
+        let loginCount = 0;
+        let batchCount = 0;
+        nock('http://1.2.3.4:80')
+            .persist()
+            .post(/\/cgi-bin\/api\.cgi\?cmd=Login/)
+            .reply(() => { loginCount++; return [200, [{ code: 0, value: { Token: { name: `TOK${loginCount}`, leaseTime: 3600 } } }]]; });
+        nock('http://1.2.3.4:80')
+            .persist()
+            .post(/\/cgi-bin\/api\.cgi\?cmd=GetMdState/)
+            .reply(() => {
+                batchCount++;
+                // First batch: token invalidated server-side → per-entry -6 (no exception).
+                if (batchCount === 1) {
+                    return [200, [
+                        { cmd: 'GetMdState', code: -6, error: { rspCode: -6 } },
+                        { cmd: 'GetAiState', code: -6, error: { rspCode: -6 } },
+                    ]];
+                }
+                return [200, [
+                    { cmd: 'GetMdState', code: 0, value: { state: 0 } },
+                    { cmd: 'GetAiState', code: 0, value: { AiState: { people: { support: 1, alarm_state: 0 } } } },
+                ]];
+            });
+        const api = new ReolinkAPI({ host: '1.2.3.4', username: 'u', password: 'p', log: silentLog });
+        const data = await api._batchCmd([
+            { cmd: 'GetMdState', param: { channel: 0 } },
+            { cmd: 'GetAiState', param: { channel: 0 } },
+        ]);
+        expect(loginCount).to.be.at.least(2);   // initial login + one re-login
+        expect(batchCount).to.equal(2);         // first batch failed, retried once
+        expect(Array.isArray(data)).to.equal(true);
+        expect(data[0]).to.have.property('code', 0);
+    });
 });

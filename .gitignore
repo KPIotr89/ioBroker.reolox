@@ -5,6 +5,7 @@ node_modules/
 npm-debug.log
 .DS_Store
 Thumbs.db
+*.patch
 admin/i18n/flat.txt
 admin/i18n/*/flat.txt
 PROJEKT_STATUS.md

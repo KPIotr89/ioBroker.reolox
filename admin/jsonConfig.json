@@ -341,34 +341,6 @@
                     }
                 }
             }
-        },
-        "_tabAdvanced": {
-            "type": "panel",
-            "label": "Advanced",
-            "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMTIgMmExMCAxMCAwIDEgMCAxMCAxMEEzMCAxMCAwIDAgMCAxMiAyem0wIDE4YTggOCAwIDEgMSA4LTggOCA4IDAgMCAxLTggOHptMS0xM2gtMnY2bDUuMjUgMy4xNS43NS0xLjIzLTQuNS0yLjY3eiIvPjwvc3ZnPg==",
-            "items": {
-                "snapshotOnMotion": {
-                    "type": "checkbox",
-                    "label": "Auto-capture snapshot on motion",
-                    "default": false,
-                    "help": "Automatically save a JPEG snapshot whenever motion is detected."
-                },
-                "snapshotRetention": {
-                    "type": "number",
-                    "label": "Snapshot retention (hours)",
-                    "default": 24,
-                    "min": 1,
-                    "max": 720,
-                    "help": "Delete snapshots older than this value automatically."
-                },
-                "_divider2": { "type": "divider" },
-                "debugMode": {
-                    "type": "checkbox",
-                    "label": "Verbose logging (debug mode)",
-                    "default": false,
-                    "help": "Log all API calls and raw payloads — useful for troubleshooting. Passwords and tokens remain masked."
-                }
-            }
         }
     }
 }

@@ -28,7 +28,6 @@
   - [Cameras tab](#cameras-tab)
   - [Loxone tab](#loxone-tab)
   - [Webhook tab](#webhook-tab)
-  - [Advanced tab](#advanced-tab)
 - [Object tree](#object-tree)
 - [Loxone integration](#loxone-integration)
   - [Virtual Input naming](#virtual-input-naming)
@@ -261,14 +260,6 @@ Server validation order on every request:
 
 If any of these fail the request is rejected without invoking the event dispatcher.
 
-### Advanced tab
-
-| Field | Notes |
-|---|---|
-| **Auto-capture snapshot on motion** | Save a JPEG snapshot whenever motion is detected |
-| **Snapshot retention (hours)** | Snapshots older than this are deleted automatically. Default 24 h |
-| **Verbose logging (debug mode)** | Log all API calls and raw payloads. Passwords and tokens remain masked |
-
 ## Object tree
 
 For a camera named `<cam>` the adapter creates the following objects under `reolox.0.<cam>`:
@@ -463,8 +454,6 @@ If the POST has an empty body (some doorbell firmwares do this on press) the req
 - mirrored as a `data:image/jpeg;base64,…` string in `snapshot.image`
 - timestamp recorded in `snapshot.timestamp`
 - file path published in `snapshot.file`
-
-When *Auto-capture snapshot on motion* is enabled in the Advanced tab a snapshot is captured on every motion start. Snapshots older than the configured retention are pruned automatically.
 
 ## PTZ control
 

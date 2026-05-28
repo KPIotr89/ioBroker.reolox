@@ -131,7 +131,11 @@ class ReoLoxAdapter extends utils.Adapter {
             this.webhookServer.setCameras(this.camConfigs);
         }
 
-        this.subscribeStates('*');
+        // Only writable branches need change events; subscribing to read-only
+        // info/status/streams would just generate ack=true noise through onStateChange.
+        this.subscribeStates('*.control.*');
+        this.subscribeStates('*.ptz.*');
+        this.subscribeStates('*.image.*');
         this.log.info(`Started. ${this.cameras.size} camera(s) active, ${this.scheduler.size()} poll task(s).`);
     }
 
@@ -191,7 +195,7 @@ class ReoLoxAdapter extends utils.Adapter {
             const info = devInfo && devInfo.DevInfo || {};
             this.log.info(`Camera "${camId}" connected: ${sanitize(info.model || 'Reolink')} ${sanitize(info.name || '')} FW=${sanitize(info.firmVer || '?')}`);
 
-            await this._detectCapabilities(camId, api, camConfig);
+            await this._detectCapabilities(camId, api, camConfig, info.firmVer);
             await this._createCameraObjects(camId, camConfig, info);
             await this._updateStreamUrls(camId, camConfig, api);
             await this._syncInitialControlState(camId, api, camConfig).catch((e) => this.log.debug(`Initial control sync failed for ${camId}: ${sanitize(e.message)}`));
@@ -236,7 +240,7 @@ class ReoLoxAdapter extends utils.Adapter {
 
     // ─── CAPABILITY DETECTION ─────────────────────────────────────────────
 
-    async _detectCapabilities(camId, api, camConfig) {
+    async _detectCapabilities(camId, api, camConfig, firmVer) {
         const caps = {
             ptz: false, whiteLed: false, siren: false,
             aiDetection: false, visitor: false, doorbell: false,
@@ -246,14 +250,14 @@ class ReoLoxAdapter extends utils.Adapter {
         // Try disk cache first to skip ~50 KB GetAbility on cold start.
         let ability = null;
         if (this.capabilityCache) {
-            ability = this.capabilityCache.get(api.host, api.port, api.username);
+            ability = this.capabilityCache.get(api.host, api.port, api.username, firmVer);
             if (ability) this.log.debug(`Camera "${camId}": GetAbility loaded from cache`);
         }
         if (!ability) {
             try {
                 ability = await api.getAbility();
                 if (ability && this.capabilityCache) {
-                    this.capabilityCache.set(api.host, api.port, api.username, ability);
+                    this.capabilityCache.set(api.host, api.port, api.username, ability, firmVer);
                 }
             } catch (e) {
                 this.log.debug(`Camera "${camId}" GetAbility unavailable, probing: ${sanitize(e.message)}`);
@@ -538,7 +542,8 @@ class ReoLoxAdapter extends utils.Adapter {
         // that shadows standalone cameras already publishing the same VIs).
         const bridgeOK = camConfig.pushToLoxone !== false && this.loxoneBridge;
 
-        let connected = true;
+        let connected = false;
+        let aiProbeOk = false;
         try {
             // AI-only motion. GetMdState (classic motion) is intentionally not used —
             // it is unreliable on CX-series and effectively replaced by AI detection.
@@ -546,6 +551,8 @@ class ReoLoxAdapter extends utils.Adapter {
             let aiAny = false;
             try {
                 const aiState = await api.getAiState(ch);
+                aiProbeOk = true;
+                connected = true;   // transport succeeded → camera is reachable
                 const ai = (aiState && aiState.AiState) || aiState || {};
                 this.log.debug(`[poll] AI ${camId} raw: ${JSON.stringify(ai)}`);
                 const typeMap = {
@@ -565,6 +572,13 @@ class ReoLoxAdapter extends utils.Adapter {
                 }
             } catch (e) {
                 this.log.debug(`AI poll failed for ${camId}: ${sanitize(e.message)}`);
+            }
+
+            // If the AI probe threw, the camera might simply lack AI — confirm
+            // reachability with a light GetDevInfo so a genuinely offline camera flips
+            // Online=0 instead of staying stuck on 1 (every command above is swallowed).
+            if (!aiProbeOk) {
+                connected = await api.isAlive();
             }
 
             // Motion = any AI detection
@@ -871,6 +885,19 @@ class ReoLoxAdapter extends utils.Adapter {
             });
             return;
         }
+        // A token invalidated server-side (e.g. NVR reboot) surfaces as per-entry error
+        // codes, not an exception — _batchCmd re-logins once, but if the whole batch still
+        // came back empty treat the NVR as unreachable instead of silently reporting every
+        // channel quiet with Online=1.
+        const anyOk = Array.isArray(results) && results.some((r) => r && (r.code === 0 || r.value));
+        if (!anyOk) {
+            this.log.debug(`NVR "${nvrId}" batch returned no valid results — marking offline`);
+            await this.setStateAsync(`${nvrId}.info.connection`, false, true);
+            await this._emitChange(nvrId, 'online', false, async () => {
+                if (bridgeOK) await this.loxoneBridge.sendStatus(camConfig.name || nvrId, false);
+            });
+            return;
+        }
         await this.setStateAsync(`${nvrId}.info.connection`, true, true);
         // Heartbeat Online=1 to Loxone: emit on change OR refresh every HEARTBEAT_INTERVAL_MS
         const lastBeatKey = `${nvrId}.onlineHeartbeat`;
@@ -1085,7 +1112,10 @@ class ReoLoxAdapter extends utils.Adapter {
                 case 'control.whiteLed': {
                     this.userWriteAt.set(`${camId}.control.whiteLed`, Date.now());
                     try {
-                        await api.setWhiteLed({ channel: ch, state: state.val ? 1 : 0, mode: 0, bright: 100 });
+                        // Minimal payload — CX810/CX820 reject the full SetWhiteLed
+                        // (LightingSchedule / mode=1) with rspCode=-13. 'state' is the on/off
+                        // field per API; mode and brightness are deliberately left untouched.
+                        await api.setWhiteLedConfig(ch, { state: state.val ? 1 : 0 });
                         await this.setStateAsync(id, !!state.val, true);
                     } catch (e) {
                         this.log.warn(`Camera "${camId}" SetWhiteLed failed: ${sanitize(e.message)}`);
@@ -1255,7 +1285,9 @@ class ReoLoxAdapter extends utils.Adapter {
                 if (cam.pushToLoxone === false) continue;  // user opted out for this row
                 if (cam.isNvr) {
                     // Expand NVR into one row per active channel.
-                    const nvrId = this.sanitizeId(cam.name || `nvr_${cam.host}`);
+                    // Must match the id derived in initCamera() (cam_<host> fallback),
+                    // otherwise the activeChannels lookup below misses on unnamed rows.
+                    const nvrId = this.sanitizeId(cam.name || `cam_${cam.host}`);
                     const channels = this.lastStates.get(`${nvrId}.activeChannels`) || [];
                     push(cam, 'Online', 'digital', 'NVR reachable');
                     if (channels.length === 0) {
