@@ -645,12 +645,98 @@ class ReoLoxAdapter extends utils.Adapter {
                 await this.setStateAsync(`${chId}.info.uid`, ch.uid || '', true);
                 await this.setStateAsync(`${chId}.info.online`, ch.online === 1, true);
                 await this.setStateAsync(`${chId}.info.sleep`, ch.sleep === 1, true);
+                // Status states for motion + AI (filled by poller)
+                await this._state(nvrId, `ch${ch.channel}.status.motionDetected`, 'Motion (NVR-side)', 'boolean', 'sensor.motion', false, false);
+                await this._state(nvrId, `ch${ch.channel}.status.personDetected`, 'AI person detected', 'boolean', 'sensor.motion', false, false);
+                await this._state(nvrId, `ch${ch.channel}.status.vehicleDetected`, 'AI vehicle detected', 'boolean', 'sensor.motion', false, false);
+                await this._state(nvrId, `ch${ch.channel}.status.animalDetected`, 'AI animal detected', 'boolean', 'sensor.motion', false, false);
+                await this._state(nvrId, `ch${ch.channel}.status.faceDetected`, 'AI face detected', 'boolean', 'sensor.motion', false, false);
             }
 
-            this.log.info(`NVR "${nvrId}" Stage 1 ready. (Stage 2 — per-channel motion/AI polling — comes in v2.3.)`);
+            // Remember active channel list + name mapping for the poller
+            const activeChannels = active.map((c) => ({ channel: c.channel, name: c.name }));
+            this.lastStates.set(`${nvrId}.activeChannels`, activeChannels);
+
+            // Stage 2 — start polling motion + AI per channel
+            const intervalMs = Math.max(1, camConfig.pollInterval || this.config.defaultPollInterval || 1) * 1000;
+            this.scheduler.add({
+                key: `nvr:${nvrId}`,
+                intervalMs,
+                run: () => this._pollNvr(nvrId),
+            });
+
+            this.log.info(`NVR "${nvrId}" ready. Polling ${activeChannels.length} channel(s) every ${intervalMs / 1000}s.`);
         } catch (err) {
             this.log.error(`NVR "${nvrId}" init failed: ${sanitize(err.message)}`);
             await this.setStateAsync(`${nvrId}.info.connection`, false, true).catch(() => undefined);
+        }
+    }
+
+    /**
+     * Stage 2 NVR poller. One batch HTTP call per cycle: GetMdState + GetAiState
+     * for every online channel. Emits per-channel state changes and forwards
+     * events to Loxone as `<viPrefix>_<nvrName>_<channelName>_<event>`.
+     */
+    async _pollNvr(nvrId) {
+        const api = this.cameras.get(nvrId);
+        const camConfig = this.camConfigs.get(nvrId);
+        const channels = this.lastStates.get(`${nvrId}.activeChannels`) || [];
+        if (!api || !camConfig || channels.length === 0) return;
+
+        // Build the batch — for every channel: GetMdState + GetAiState
+        const commands = [];
+        for (const ch of channels) {
+            commands.push({ cmd: 'GetMdState', action: 0, param: { channel: ch.channel } });
+            commands.push({ cmd: 'GetAiState', action: 0, param: { channel: ch.channel } });
+        }
+
+        let results;
+        try {
+            results = await api._batchCmd(commands);
+        } catch (e) {
+            this.log.debug(`NVR "${nvrId}" batch poll failed: ${sanitize(e.message)}`);
+            await this.setStateAsync(`${nvrId}.info.connection`, false, true);
+            await this._emitChange(nvrId, 'online', false, async () => {
+                if (this.loxoneBridge) await this.loxoneBridge.sendStatus(`${camConfig.name || nvrId}`, false);
+            });
+            return;
+        }
+        await this.setStateAsync(`${nvrId}.info.connection`, true, true);
+
+        // Each channel produces 2 sequential entries: [MdState, AiState]
+        for (let i = 0; i < channels.length; i++) {
+            const ch = channels[i];
+            const chId = `${nvrId}.ch${ch.channel}`;
+            const mdData = results[i * 2] && results[i * 2].value;
+            const aiData = results[i * 2 + 1] && results[i * 2 + 1].value;
+
+            const aiObj = (aiData && (aiData.AiState || aiData)) || {};
+            const aiDetected = {
+                person: !!(aiObj.people && aiObj.people.support === 1 && aiObj.people.alarm_state === 1),
+                vehicle: !!(aiObj.vehicle && aiObj.vehicle.support === 1 && aiObj.vehicle.alarm_state === 1),
+                animal: !!(aiObj.dog_cat && aiObj.dog_cat.support === 1 && aiObj.dog_cat.alarm_state === 1),
+                face: !!(aiObj.face && aiObj.face.support === 1 && aiObj.face.alarm_state === 1),
+            };
+
+            // Motion (MdState OR any AI) — same logic as standalone cameras
+            const md = !!(mdData && (mdData.state === 1 || (mdData.MdState && mdData.MdState.state === 1)));
+            const anyAi = aiDetected.person || aiDetected.vehicle || aiDetected.animal || aiDetected.face;
+            const motion = md || anyAi;
+
+            // VI naming: <viPrefix>_<nvrName>_<channelName>_<event>
+            const loxoneName = `${camConfig.name || nvrId}_${ch.name || `ch${ch.channel}`}`;
+
+            await this._emitChange(`${chId}`, 'motion', motion, async () => {
+                await this.setStateAsync(`${chId}.status.motionDetected`, motion, true);
+                if (this.loxoneBridge) await this.loxoneBridge.sendMotion(loxoneName, motion);
+            });
+
+            for (const [type, detected] of Object.entries(aiDetected)) {
+                await this._emitChange(`${chId}`, `ai_${type}`, detected, async () => {
+                    await this.setStateAsync(`${chId}.status.${type}Detected`, detected, true);
+                    if (this.loxoneBridge) await this.loxoneBridge.sendAi(loxoneName, type, detected);
+                });
+            }
         }
     }
 
