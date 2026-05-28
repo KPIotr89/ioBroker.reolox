@@ -444,6 +444,10 @@ class ReoLoxAdapter extends utils.Adapter {
         const camConfig = this.camConfigs.get(camId);
         if (!api || !camConfig) return;
         const ch = camConfig.channel || 0;
+        // pushToLoxone gates whether events get forwarded to the Loxone bridge.
+        // Defaults to true (back-compat); set to false on duplicate rows (e.g. NVR
+        // that shadows standalone cameras already publishing the same VIs).
+        const bridgeOK = camConfig.pushToLoxone !== false && this.loxoneBridge;
 
         let connected = true;
         try {
@@ -467,7 +471,7 @@ class ReoLoxAdapter extends utils.Adapter {
                     if (detected) aiAny = true;
                     await this._emitChange(camId, `ai_${type}`, detected, async () => {
                         await this.setStateAsync(`${camId}.status.${type}Detected`, detected, true);
-                        if (this.loxoneBridge) await this.loxoneBridge.sendAi(camConfig.name || camId, type, detected);
+                        if (bridgeOK) await this.loxoneBridge.sendAi(camConfig.name || camId, type, detected);
                     });
                 }
             } catch (e) {
@@ -478,7 +482,7 @@ class ReoLoxAdapter extends utils.Adapter {
             await this._emitChange(camId, 'motion', aiAny, async () => {
                 await this.setStateAsync(`${camId}.status.motionDetected`, aiAny, true);
                 if (aiAny) await this.setStateAsync(`${camId}.status.lastMotionTime`, Date.now(), true);
-                if (this.loxoneBridge) await this.loxoneBridge.sendMotion(camConfig.name || camId, aiAny);
+                if (bridgeOK) await this.loxoneBridge.sendMotion(camConfig.name || camId, aiAny);
             });
 
             // WhiteLed (only here if there's no fast-poll task already covering it)
@@ -497,7 +501,7 @@ class ReoLoxAdapter extends utils.Adapter {
                     await this._emitChange(camId, 'doorbell', ringing, async () => {
                         await this.setStateAsync(`${camId}.status.doorbellRing`, ringing, true);
                         await this.setStateAsync(`${camId}.status.visitorDetected`, ringing, true);
-                        if (this.loxoneBridge) {
+                        if (bridgeOK) {
                             await this.loxoneBridge.sendCustom(camConfig.name || camId, 'Visitor', ringing ? 1 : 0);
                             await this.loxoneBridge.sendCustom(camConfig.name || camId, 'doorbellRing', ringing ? 1 : 0);
                         }
@@ -521,7 +525,7 @@ class ReoLoxAdapter extends utils.Adapter {
         if (stateChanged || due) {
             this.lastStates.set(`${camId}.online`, connected);
             this.lastStates.set(lastBeatKey, Date.now());
-            if (this.loxoneBridge) await this.loxoneBridge.sendStatus(camConfig.name || camId, connected);
+            if (bridgeOK) await this.loxoneBridge.sendStatus(camConfig.name || camId, connected);
         }
     }
 
@@ -682,6 +686,7 @@ class ReoLoxAdapter extends utils.Adapter {
         const camConfig = this.camConfigs.get(nvrId);
         const channels = this.lastStates.get(`${nvrId}.activeChannels`) || [];
         if (!api || !camConfig || channels.length === 0) return;
+        const bridgeOK = camConfig.pushToLoxone !== false && this.loxoneBridge;
 
         // Build the batch — for every channel: GetMdState + GetAiState
         const commands = [];
@@ -697,7 +702,7 @@ class ReoLoxAdapter extends utils.Adapter {
             this.log.debug(`NVR "${nvrId}" batch poll failed: ${sanitize(e.message)}`);
             await this.setStateAsync(`${nvrId}.info.connection`, false, true);
             await this._emitChange(nvrId, 'online', false, async () => {
-                if (this.loxoneBridge) await this.loxoneBridge.sendStatus(`${camConfig.name || nvrId}`, false);
+                if (bridgeOK) await this.loxoneBridge.sendStatus(`${camConfig.name || nvrId}`, false);
             });
             return;
         }
@@ -710,7 +715,7 @@ class ReoLoxAdapter extends utils.Adapter {
         if (wasOnline !== true || due) {
             this.lastStates.set(`${nvrId}.online`, true);
             this.lastStates.set(lastBeatKey, Date.now());
-            if (this.loxoneBridge) await this.loxoneBridge.sendStatus(camConfig.name || nvrId, true);
+            if (bridgeOK) await this.loxoneBridge.sendStatus(camConfig.name || nvrId, true);
         }
 
         // Each channel produces 2 sequential entries: [MdState, AiState]
@@ -738,13 +743,13 @@ class ReoLoxAdapter extends utils.Adapter {
 
             await this._emitChange(`${chId}`, 'motion', motion, async () => {
                 await this.setStateAsync(`${chId}.status.motionDetected`, motion, true);
-                if (this.loxoneBridge) await this.loxoneBridge.sendMotion(loxoneName, motion);
+                if (bridgeOK) await this.loxoneBridge.sendMotion(loxoneName, motion);
             });
 
             for (const [type, detected] of Object.entries(aiDetected)) {
                 await this._emitChange(`${chId}`, `ai_${type}`, detected, async () => {
                     await this.setStateAsync(`${chId}.status.${type}Detected`, detected, true);
-                    if (this.loxoneBridge) await this.loxoneBridge.sendAi(loxoneName, type, detected);
+                    if (bridgeOK) await this.loxoneBridge.sendAi(loxoneName, type, detected);
                 });
             }
         }
@@ -1011,6 +1016,7 @@ class ReoLoxAdapter extends utils.Adapter {
             };
             for (const cam of cams) {
                 if (!cam || !cam.enabled) continue;
+                if (cam.pushToLoxone === false) continue;  // user opted out for this row
                 if (cam.isNvr) {
                     // Expand NVR into one row per active channel.
                     const nvrId = this.sanitizeId(cam.name || `nvr_${cam.host}`);

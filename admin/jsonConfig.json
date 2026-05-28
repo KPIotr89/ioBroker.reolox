@@ -108,6 +108,14 @@
                             "default": false,
                             "width": "55px",
                             "tooltip": "Mark this row as a Reolink NVR (e.g. RLN8-410). ReoLox pulls the channel list from the device on startup and creates per-channel sub-states under reolox.0.<nvr>.chN.*"
+                        },
+                        {
+                            "type": "checkbox",
+                            "attr": "pushToLoxone",
+                            "label": "→ Loxone",
+                            "default": true,
+                            "width": "85px",
+                            "tooltip": "Send events from this camera/NVR to the Loxone bridge. Disable for NVR rows when standalone cameras already cover the same channels — keeps state tree in ioBroker but stops duplicate Virtual Inputs."
                         }
                     ],
                     "default": []
