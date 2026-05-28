@@ -17,576 +17,302 @@
 
 ---
 
-## Table of contents
-
-- [What it does](#what-it-does)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Compatibility](#compatibility)
-- [Installation](#installation)
-- [Configuration](#configuration)
-  - [Cameras tab](#cameras-tab)
-  - [Loxone tab](#loxone-tab)
-  - [Webhook tab](#webhook-tab)
-- [Object tree](#object-tree)
-- [Loxone integration](#loxone-integration)
-  - [Virtual Input naming](#virtual-input-naming)
-  - [Token Auth vs Basic](#token-auth-vs-basic)
-  - [Loxone Intercom (RTSP on ring)](#loxone-intercom-rtsp-on-ring)
-- [NVR support](#nvr-support)
-- [Camera account permissions](#camera-account-permissions)
-- [Webhook server](#webhook-server)
-- [Snapshot capture](#snapshot-capture)
-- [PTZ control](#ptz-control)
-- [White LED & spotlight](#white-led--spotlight)
-- [Gate trigger](#gate-trigger)
-- [Auto-discovery](#auto-discovery)
-- [Camera-specific notes](#camera-specific-notes)
-- [Troubleshooting](#troubleshooting)
-- [Known limitations](#known-limitations)
-- [Development](#development)
-- [License](#license)
-
----
-
-## What it does
-
-ReoLox connects every Reolink camera on your local network to ioBroker and Loxone. No cloud, no Node-RED bridge, no MQTT round-trip. The adapter speaks the local Reolink HTTP API directly, exposes every camera state in ioBroker's object tree, and forwards events to your Loxone Miniserver in real time via Virtual Inputs (Token Auth over HTTP or UDP).
-
-It is built around a hardened webhook server that accepts Reolink push events on a local port, a poll scheduler that batches all periodic reads with jitter and backoff, and a Loxone bridge that supports modern Token Auth as well as legacy Basic. Camera passwords are stored encrypted by ioBroker (`protectedNative` / `encryptedNative`).
+ReoLox connects every Reolink camera and NVR on your LAN to ioBroker and Loxone over the local Reolink HTTP API — **no cloud, no MQTT, no Node-RED bridge**. Events flow to the Miniserver as Virtual Inputs in real time; control flows back from Loxone Virtual Outputs straight into the cameras. Camera passwords are stored encrypted by ioBroker.
 
 ## Features
 
-**Camera control**
+**Events → ioBroker & Loxone**
+- Motion (AI-derived) and AI person / vehicle / animal / face
+- Doorbell ring & visitor — polling **and** push webhook
+- Online heartbeat, WhiteLed gate-trigger, Intercom RTSP-URL on ring
 
-- Motion detection (`GetMdState`)
-- AI detection: person, vehicle, animal, face (`GetAiState`)
-- Doorbell button press (`GetDoorbell`)
-- IR lights — Auto / On / Off
-- White LED spotlight (state read + on/off control with brightness)
-- PTZ control: pan, tilt, zoom, focus, presets, patrol, stop
-- ISP settings: brightness, contrast, saturation, sharpness
-- Snapshot capture (JPEG written to disk, base64 in state, timestamp)
-- Stream URLs: RTSP main / sub (with and without credentials), RTMP, FLV
-- Reboot
+**Camera & NVR control** — ioBroker states *and* Loxone Virtual Outputs
+- Status LED, SD recording, push (master + per type), White LED (on/off · brightness · mode), OSD, motion sensitivity, audio alarm / siren, IR lights, ISP image, PTZ, snapshot, reboot
+- NVR per channel: recording, motion, AI, push
 
 **Loxone bridge**
+- HTTP Virtual Inputs (Token Auth HMAC-SHA1, proactive refresh, auto-fallback to Basic) or UDP
+- **Built-in HTTP control endpoint** — Loxone Virtual Outputs drive any control state directly, *no `simple-api` needed*
 
-- HTTP Virtual Inputs (recommended) — Token Auth via HMAC-SHA1, proactive refresh at 80 % of token lifetime, automatic fallback to Basic if the Miniserver does not support tokens
-- UDP transport (token-less)
-- Configurable Virtual Input prefix (default `ReoLox`)
-- Loxone Intercom integration: the RTSP stream URL is delivered to a dedicated VI on doorbell ring so the Loxone Touch panel can display the camera feed
+**Reliability & security**
+- Poll scheduler (jitter · per-task mutex · exponential backoff), deterministically tracked timers, singleflight login, firmware-aware disk capability cache
+- Webhook hardened with IP allowlist + constant-time shared secret + 64 KB body cap; encrypted credentials; credential-free public stream URLs
+- 60 unit + 39 package tests · CI on Linux / macOS / Windows × Node 18 / 20 / 22
 
-**NVR support**
-
-- Reolink RLN8 / RLN16 / RLN36 — single row with `NVR ✓` flag, channels discovered via `GetChannelstatus`
-- Per-channel state tree: `reolox.0.<nvr>.chN.{info,status}.*`
-- Single batch `GetMdState` + `GetAiState` per cycle for every online channel (one HTTP round-trip)
-- Loxone VIs named `<prefix>_<nvr>_<channelName>_<event>` — e.g. `ReoLox_NVR_Front_AI_person`
-- `→ Loxone` per-row toggle: keep state tree in ioBroker but silence duplicate VIs when standalone + NVR rows cover the same cameras
-
-**Push webhook**
-
-- Dedicated HTTP server on a configurable port (default `7777`)
-- Source-IP allowlist (`auto` = derived from configured camera hosts)
-- Shared-secret authentication via `?secret=…` query parameter or `X-ReoLox-Secret` header, constant-time comparison
-- 64 KB body cap (oversize requests get `413 Payload Too Large`)
-- Path namespaced under `/reolox/<camera>` — anything else returns 404
-- CRLF and control characters sanitised in every log line
-
-**Reliability**
-
-- `PollScheduler` with start-up jitter (so N cameras don't all log in at the same instant), per-task mutex (no overlapping cycles), exponential backoff on failure, capped retries
-- `TimerManager` tracks every `setTimeout` / `setInterval` so unload cancels them deterministically — no `setStateAsync` after destroy
-- `ReolinkAPI` singleflight login (concurrent callers share one network round-trip), exponential backoff on `ECONNRESET` / `ETIMEDOUT` / 5xx
-- `CapabilityCache` persists `GetAbility` responses on disk — cold start does not re-query every camera
-- Camera id uniqueness validated at startup
-
-**Security**
-
-- `loxonePassword` and `webhookSharedSecret` in `encryptedNative`
-- `cameras` (with their passwords) in `protectedNative`
-- Public stream URL states (`streams.rtspMainPublic`, `streams.rtspSubPublic`) carry **no** credentials — safe to read from scripts or external dashboards
-- Webhook server rejects unknown source IPs by default
-
-**Tooling**
-
-- ONVIF auto-discovery in Admin UI
-- 53 unit tests (parsePayload, safe-log, TimerManager, PollScheduler, LoxoneBridge, WebhookServer HTTP integration, CapabilityCache, ReolinkAPI with `nock`)
-- 39 package validation tests
-- CI runs on Ubuntu / Windows / macOS × Node 18 / 20 / 22
-
-## Architecture
-
-```
-                     ┌─────────────────────────────────────────────────┐
-                     │                  ReoLox adapter                 │
-                     │                                                 │
-   ┌───────────┐     │   ┌──────────────┐   ┌────────────────────┐     │   ┌────────────────────┐
-   │  Reolink  │     │   │ ReolinkAPI   │   │ LoxoneBridge       │     │   │ Loxone Miniserver  │
-   │  camera   │◄────┼──►│ - login SF   │   │ - HTTP token auth  │◄────┼──►│ - Virtual Inputs   │
-   │  (HTTP)   │     │   │ - retry/backoff│ │ - UDP              │     │   │ - Intercom panel   │
-   └───────────┘     │   └──────────────┘   └────────────────────┘     │   └────────────────────┘
-                     │                                                 │
-   ┌───────────┐     │   ┌──────────────┐   ┌────────────────────┐     │
-   │  Reolink  │─POST│──►│ WebhookServer│   │ PollScheduler      │     │
-   │  push     │     │   │ - allowlist  │   │ - jitter, mutex    │     │
-   │  events   │     │   │ - secret     │   │ - exp. backoff     │     │
-   └───────────┘     │   │ - 64 KB cap  │   └────────────────────┘     │
-                     │   └──────────────┘                              │
-                     │                                                 │
-                     │   ┌──────────────┐   ┌────────────────────┐     │
-                     │   │ TimerManager │   │ CapabilityCache    │     │
-                     │   │ - tracked    │   │ - disk, TTL 24h    │     │
-                     │   │   setTimeout │   └────────────────────┘     │
-                     │   └──────────────┘                              │
-                     └─────────────────────────────────────────────────┘
-                                            │
-                                            ▼
-                                    ioBroker objects
-                                  (reolox.0.<cam>.*)
-```
-
-Source layout:
-
-```
-main.js                         # adapter orchestrator (~600 lines)
-lib/
-  reolink-api.js                # HTTP client per camera
-  loxone-bridge.js              # Loxone HTTP (token/basic) + UDP
-  webhook-server.js             # /reolox/<cam> push receiver + parser
-  poll-scheduler.js             # periodic task supervisor
-  timer-manager.js              # tracked setTimeout/setInterval
-  capability-cache.js           # GetAbility disk cache
-  discovery.js                  # ONVIF WS-Discovery probe
-  safe-log.js                   # CRLF / password / token redaction
-admin/
-  jsonConfig.json               # admin UI (i18n-ready)
-  reolox.svg                    # adapter icon
-  i18n/{en,pl,de}/translations.json
-test/
-  unit/*.test.js                # mocha + chai + nock
-  package/manifest.test.js      # @iobroker/testing
-```
-
-## Compatibility
-
-| Component              | Tested with                                         |
-|------------------------|-----------------------------------------------------|
-| ioBroker js-controller | ≥ 5.0                                               |
-| ioBroker admin         | ≥ 6.0                                               |
-| Node.js                | 18, 20, 22                                          |
-| Reolink firmware       | v3.x — CX810/CX820, Video Doorbell PoE, RLC-810A    |
-| Reolink NVR firmware   | v3.6+ — RLN8-410 verified (RLN16/RLN36 should work) |
-| Loxone Miniserver      | Gen 1 (Basic Auth) / Gen 2 (Token Auth, HMAC-SHA1)  |
-| Platforms              | Linux / macOS / Windows                             |
-
-Older Reolink firmwares (`v2.x` and below) may work but are not actively tested. PoE and Wi-Fi cameras are equally supported.
-
-## Installation
-
-From the GitHub repo:
+## Quick start
 
 ```bash
 iobroker url https://github.com/KPIotr89/ioBroker.reolox
 ```
 
-Then **Admin → Adapters → ReoLox → Add instance**. Open the instance configuration and start with the *Cameras* tab.
+Then **Admin → Adapters → ReoLox → Add instance** and open the configuration:
 
-The adapter does not require any external services (no go2rtc, no Node-RED, no MQTT broker). If you want a re-stream layer for the Loxone Intercom you can deploy `go2rtc` separately, but it is not part of ReoLox.
+1. **Cameras** — add a row per camera (name, IP, admin user/password). Click **🔍 Discover** to find devices on the LAN.
+2. **Loxone** — enable the bridge, enter the Miniserver IP and a user that may write Virtual Inputs. Use the **Generate** button to get the exact VI names to create in Loxone Config.
+3. **Webhook** (recommended for doorbells) — enable the server, set the ioBroker IP and a shared secret; push URLs are configured on the cameras automatically.
 
-## Configuration
+No external services required (go2rtc / Node-RED / MQTT are **not** needed).
 
-### Cameras tab
-
-Add a row per camera. Fields:
-
-| Field | Notes |
-|---|---|
-| **On** | Enable / disable polling for this camera without removing the row |
-| **Name** | Used as the ioBroker state id and the camera component of every Loxone VI name. Allowed characters: `a–z A–Z 0–9 _ -` and space. Must be unique across the camera list |
-| **IP / Host** | LAN address of the camera |
-| **Port** | HTTP(S) port, default 80 (or 443 for TLS) |
-| **User / Password** | Account configured on the camera. **Admin** role required for WhiteLed and most setters |
-| **Ch** | Channel index — `0` for standalone cameras, `0–15` for NVR channels |
-| **TLS** | Use HTTPS (self-signed certs accepted) |
-| **Poll s** | Status polling interval. Default **1 s**. Per-camera override of the *Default poll interval* below |
-| **Gate** | Enable fast-poll WhiteLed knock-pattern gate trigger for this camera (see [Gate trigger](#gate-trigger)) |
-| **Doorbell** | Mark this camera as a doorbell. Forces `caps.visitor + caps.doorbell = true` even when firmware misreports `GetDoorbell`. Visitor events arrive via webhook push and pulse `<prefix>_<cam>_Visitor` for 1 s |
-| **NVR** | Mark this row as a Reolink NVR (RLN8/RLN16/RLN36). ReoLox pulls the channel list from the device at startup and creates per-channel sub-states under `reolox.0.<nvr>.chN.*`. See [NVR support](#nvr-support) |
-| **→ Loxone** | Default `✓`. Uncheck to keep the row in ioBroker but stop forwarding events to the Loxone bridge — useful when a duplicate row would publish the same VIs (e.g. an NVR row alongside standalone cameras) |
-
-Two helpers under the table:
-
-- **🔍 Discover** runs an ONVIF WS-Discovery probe and lists every Reolink device on the LAN
-- **Default poll interval** is the fallback when *Poll s* is empty on a row
-- **Capability cache TTL (hours)** controls how long `GetAbility` results are cached on disk (default 24 h, set 0 to disable)
-
-### Loxone tab
+## Configuration — Cameras tab
 
 | Field | Notes |
 |---|---|
-| **Enable Loxone integration** | Master switch |
-| **Miniserver IP address** | LAN address of the Miniserver |
-| **HTTP port** | Default 80 |
-| **Username / Password** | Loxone user that may write Virtual Inputs. Password is encrypted at rest |
-| **Authentication** | `Token` (recommended) — HMAC-SHA1, refreshed proactively at 80 % of the token lifetime, auto-fallback to Basic on unsupported firmware; or `Basic` — legacy, sends credentials on every request |
-| **Communication mode** | `HTTP Virtual Inputs` (default), `UDP`, or both |
-| **UDP port** | Visible only in UDP modes, default 7000 |
-| **Virtual Input prefix** | Default `ReoLox`. All generated VI names are prefixed with this string |
-| **Enable Loxone Intercom integration** | When the doorbell rings, the RTSP stream URL is sent to `<prefix>_<camera>_intercom` so the Loxone Touch panel can show the live feed |
+| **On** | Enable / disable polling without deleting the row |
+| **Name** | ioBroker state id and the camera part of every Loxone VI. `a–z A–Z 0–9 _ -` + space, unique |
+| **IP / Host · Port · TLS** | LAN address; default port 80 (443 with TLS, self-signed accepted) |
+| **User / Password** | Camera account — **Admin** role required for WhiteLed and most setters |
+| **Ch** | Channel index — `0` for standalone, `0–15` for NVR channels |
+| **Poll s** | Polling interval, default **1 s** (per-row override of the global default) |
+| **Gate** | Fast WhiteLed knock-pattern gate trigger for this camera |
+| **Doorbell** | Force visitor/doorbell capability on (firmware that misreports `GetDoorbell`); visitor arrives via webhook as a 1 s pulse |
+| **NVR** | Treat the row as a Reolink NVR — channels are discovered and exposed under `reolox.0.<nvr>.chN.*` |
+| **→ Loxone** | Keep the row in ioBroker but stop forwarding its events (silence duplicate VIs) |
 
-A help panel at the bottom lists every VI name pattern using the current prefix.
+> Loxone and Webhook tab fields, plus the full validation order, are documented under **Advanced → Configuration reference**.
 
-### Webhook tab
+## Loxone integration
 
-The webhook server receives Reolink push events so the adapter does **not** have to poll for doorbell or visitor detection (1 s polling is too slow to catch a button press).
+**Virtual Inputs** use the pattern `<prefix>_<camera>_<event>` (prefix default `ReoLox`). For a camera `garaz`:
 
-| Field | Notes |
-|---|---|
-| **Enable webhook server** | Master switch |
-| **Listen port** | Default 7777 |
-| **ioBroker IP (visible to cameras)** | LAN address the cameras can reach. The adapter auto-configures each camera's push URL at startup using this value |
-| **Shared secret** | Strongly recommended. Every webhook POST must include `?secret=…` or an `X-ReoLox-Secret` header. Auto-configured push URLs embed it automatically. Encrypted at rest |
-| **Source IP allowlist** | `auto` (default) accepts only the IPs of cameras configured in the *Cameras* tab. You can also set an explicit comma-separated list (e.g. `192.168.0.48, 192.168.0.49`) |
+```
+ReoLox_garaz_Motion        ReoLox_garaz_AI_person     ReoLox_garaz_AI_vehicle
+ReoLox_garaz_AI_animal     ReoLox_garaz_Online        ReoLox_garaz_Visitor   (1 s pulse)
+ReoLox_garaz_gate_trigger  ReoLox_garaz_whiteLed      ReoLox_garaz_intercom  (RTSP URL)
+```
 
-Server validation order on every request:
+The exact names are also written to `reolox.0.<cam>.loxone.vi*` at startup — copy them from there, or use **Generate** in the Loxone tab (it expands NVR rows into per-channel entries).
 
-1. Method must be `POST`
-2. Path must start with `/reolox/`
-3. Source IP must be in the allowlist
-4. Shared secret must match (constant-time comparison)
-5. Body must be ≤ 64 KB (oversize → `413`)
-
-If any of these fail the request is rejected without invoking the event dispatcher.
-
-### Control from Loxone (no extra adapter)
-
-The same server also accepts **control commands**, so a Loxone Virtual Output can write any control state directly — no `simple-api`/`rest-api` adapter in between (option *Allow Loxone control commands*, default on):
+**Control from Loxone (Virtual Outputs).** The webhook server also accepts control commands, so a Virtual Output writes any control state directly — no extra adapter:
 
 ```
 GET http://<iobroker>:<port>/reolox/cmd/<state.path>/<value>?secret=…
 ```
 
-- digital: `…/cmd/taras.control.whiteLed/1` (on) · `…/cmd/taras.control.whiteLed/0` (off)
-- analog (Loxone substitutes `<v>`): `…/cmd/taras.control.whiteLedBrightness/<v>`
-- NVR channel: `…/cmd/nvr.ch3.control.recording/0`
-
-Accepted only from the Loxone Miniserver IP (*Loxone* tab) or the allowlist, with the shared secret. Only writable `*.control.*` states can be set; the value is coerced to the state's type and written with `ack=false`, so the normal command pipeline forwards it to the camera/NVR.
-
-In **Loxone Config → Peripherals → Virtual Outputs**: add a Virtual Output with address `http://<iobroker>:<port>`, then a Virtual Output Command — *command on* `/reolox/cmd/taras.control.whiteLed/1?secret=…`, *command off* `/reolox/cmd/taras.control.whiteLed/0?secret=…`, HTTP method `GET`.
-
-## Object tree
-
-For a camera named `<cam>` the adapter creates the following objects under `reolox.0.<cam>`:
-
-```
-info/
-  connection           bool   live connection state
-  model                string camera model
-  name                 string camera reported name
-  firmware             string firmware version
-  serial               string serial number
-  hardwareVersion      string hardware revision
-  channelCount         number number of channels reported
-
-status/
-  motionDetected       bool   motion right now
-  personDetected       bool   AI person right now
-  vehicleDetected      bool   AI vehicle right now
-  animalDetected       bool   AI animal right now
-  faceDetected         bool   AI face right now
-  lastMotionTime       number timestamp of last motion start
-  visitorDetected      bool   doorbell ring / visitor AI
-  doorbellRing         bool   physical doorbell button state
-  whiteLed             bool   live WhiteLed state (if supported)
-  whiteLedTrigger      bool   gate trigger pulse (if Gate enabled)
-
-control/
-  snapshot             button  trigger snapshot capture
-  reboot               button  reboot camera
-  irLights             enum    Auto / On / Off
-  whiteLed             bool    write WhiteLed state (if supported)
-  siren                button  trigger siren (if supported)
-
-ptz/                          (only if camera supports PTZ)
-  command              enum    Left, Right, Up, Down, LeftUp, ..., Stop, Auto
-  speed                number  1-64
-  goToPreset           number  preset index
-  patrol               bool    start/stop patrol
-  stop                 button  stop any PTZ movement
-
-image/
-  brightness           number  0-255
-  contrast             number  0-255
-  saturation           number  0-255
-  sharpness            number  0-255
-
-streams/
-  rtspMainPublic       string  rtsp://<host>:554/h264Preview_01_main      (no credentials)
-  rtspSubPublic        string  rtsp://<host>:554/h264Preview_01_sub       (no credentials)
-  snapshotProxy        string  absolute path of the last snapshot file
-
-snapshot/
-  image                string  last snapshot as data: URL (base64)
-  timestamp            number  capture time
-  file                 string  absolute path of the saved JPEG
-
-storage/
-  hddCapacity          number  SD/HDD total in MB
-  hddUsed              number  SD/HDD used in MB
-
-loxone/                       (only if Loxone integration enabled)
-  viMotion             string  Loxone VI name for motion
-  viPerson             string  Loxone VI name for AI person
-  viVehicle            string  Loxone VI name for AI vehicle
-  viOnline             string  Loxone VI name for online state
-  viVisitor            string  Loxone VI name for visitor/doorbell
-  viIntercom           string  Loxone VI name carrying the RTSP URL on ring
-  viGateTrigger        string  Loxone VI name for gate trigger pulse
-```
-
-Writable states (`control.*`, `ptz.*`, `image.*`) accept commands the moment they are set. The adapter debounces user writes to `control.whiteLed` for 3 seconds so the polled state does not immediately overwrite the user's intent.
-
-## Loxone integration
-
-### Virtual Input naming
-
-Every VI uses the pattern `<prefix>_<camera>_<event>`. The prefix is configurable (default `ReoLox`); the camera name comes from the Cameras tab; the event is a fixed string.
-
-For a camera named `garaz` and the default prefix create these inputs in Loxone Config — names are case-sensitive:
-
-```
-ReoLox_garaz_Motion           digital     1 = motion, 0 = none
-ReoLox_garaz_AI_person        digital     1 = person, 0 = none
-ReoLox_garaz_AI_vehicle       digital     1 = vehicle, 0 = none
-ReoLox_garaz_AI_animal        digital     1 = animal, 0 = none
-ReoLox_garaz_Online           digital     1 = camera reachable
-ReoLox_garaz_Visitor          digital     1 = doorbell pressed (auto-pulses 1 s)
-ReoLox_garaz_gate_trigger     digital     1 = gate trigger pattern (auto-pulses 1 s)
-ReoLox_garaz_whiteLed         digital     mirrors the WhiteLed state
-ReoLox_garaz_intercom         text        RTSP URL string on ring (Intercom)
-```
-
-The exact VI names per camera are also written to `reolox.0.<cam>.loxone.vi*` once the instance starts — so you can copy them straight from there.
-
-### Token Auth vs Basic
-
-`Token` mode does the Loxone v10.2+ handshake:
-
-1. `GET /jdev/sys/getkey2/<user>` → returns `{ key, salt, hashAlg }`
-2. Compute `pwHash = uppercase(SHA1(password + ":" + salt))`
-3. Compute `hmac = HMAC-SHA1(key, user + ":" + pwHash)`
-4. `GET /jdev/sys/getjwt/<hmac>/<user>/4/iobroker-reolox/iobroker` → returns the token + `validUntil`
-5. Subsequent calls add `?autht=<token>&user=<user>` instead of a Basic header
-
-The token is refreshed at 80 % of its lifetime by the adapter, in the background. If any step fails (typically on Gen 1 Miniservers without token support) the bridge silently falls back to Basic for the remainder of the session.
-
-### Loxone Intercom (RTSP on ring)
-
-When `Enable Loxone Intercom integration` is on and a doorbell ring arrives (either via webhook push or `GetDoorbell` polling), the bridge sends the **public** RTSP URL of the main stream to `<prefix>_<camera>_intercom` (e.g. `rtsp://192.168.0.48:554/h264Preview_01_main`). On ring-end the VI is reset to `0`. The Loxone Touch panel can be configured to subscribe to that VI and display the feed.
-
-The URL does **not** carry credentials — your camera must allow anonymous RTSP (default) or you need to expose a credentialed re-stream separately. Storing user/password in the VI would be a security risk and is intentionally not supported.
-
-## NVR support
-
-ReoLox treats a Reolink NVR (RLN8/RLN16/RLN36) as a single row in the Cameras tab with the **NVR ✓** flag. On startup the adapter logs in once, reads `GetDevInfo` for the model and channel count, then `GetChannelstatus` to learn which channels actually have a camera attached. For every online channel it creates:
-
-```
-reolox.0.<nvr>.info.{model, firmware, channelCount, activeChannels, connection}
-reolox.0.<nvr>.chN.info.{name, uid, online, sleep}
-reolox.0.<nvr>.chN.status.{motionDetected, personDetected, vehicleDetected, animalDetected, faceDetected}
-```
-
-A single poller (`PollScheduler` task `nvr:<nvrId>`) runs every `Poll s` seconds and batches `GetMdState` + `GetAiState` for every online channel into **one** HTTP request — eight cameras attached to an NVR = one network round-trip per cycle.
-
-### Loxone naming convention for NVR channels
-
-When **→ Loxone ✓** is set on the NVR row, each channel pushes its own VIs using `<prefix>_<nvrName>_<channelName>_<event>`:
-
-```
-ReoLox_NVR_Front_Motion          digital
-ReoLox_NVR_Front_AI_person       digital
-ReoLox_NVR_Front_AI_vehicle      digital
-ReoLox_NVR_Front_AI_animal       digital
-ReoLox_NVR_Front_AI_face         digital
-ReoLox_NVR_Online                digital   (master NVR connection)
-```
-
-The VI list generator in the Loxone tab expands NVR rows into one entry per channel automatically, so the Generate button produces the full list of names ready to paste into Loxone Config.
-
-### Choosing between standalone and NVR rows
-
-A camera attached to an NVR can also be reachable on its own IP — you can keep both rows in the configuration. The trade-offs:
-
-- **Standalone only**: shortest path. ReoLox talks directly to each camera, the NVR row is unnecessary.
-- **NVR only**: one login session, one batch poll, less LAN chatter. Camera count limited to what the NVR enumerates.
-- **Both**: redundancy if either path fails — but you'll see two sets of VIs (`ReoLox_Front_*` and `ReoLox_NVR_Front_*`). Use the **→ Loxone** checkbox on the NVR row to keep its state tree in ioBroker but silence the duplicate bridge events.
-
-## Camera account permissions
-
-Many commands in the Reolink API (`SetPushV20`, `SetWhiteLed`, `SetIsp`, …) require the user to have the **Administrator** role in the camera. ReoLox checks `GetAbility` and surfaces the relevant permits:
-
-```
-push.permit = 4  → read-only  (User/Guest role)
-push.permit = 6  → read+write (Administrator)
-```
-
-If you see `SetPushV20 failed: ability error (rspCode -26)` in the logs, open the camera's web UI:
-
-**Setting → Device → User Management** → edit the ReoLox account → **User Level: Administrator** → Save.
-
-Repeat for every camera. After promotion the auto push-URL configuration works without manual setup.
-
-> The Reolink Video Doorbell PoE firmware `v3.0.0.4662` blocks `SetPushV20` regardless of role — for those cameras configure the push URL manually under **Surveillance → Push → Webhook URL**.
-
-## Webhook server
-
-Each camera supports `SetPushV20`, which configures an HTTP URL the camera POSTs to whenever an event fires. With ReoLox the URL is:
-
-```
-http://<ioBroker-IP>:<port>/reolox/<cameraName>?secret=<shared-secret>
-```
-
-The adapter sets this URL automatically on every enabled camera at startup. If the camera firmware does not support `SetPushV20` (Reolink Doorbell PoE FW `v3.0.0.4662` does not — the adapter falls back to polling for that camera). You can also configure the URL manually in the camera web UI under **Alarm → Push** if needed.
-
-Recognised event types on the receiver:
-
-| Type | What it does |
+| Use | Example |
 |---|---|
-| `visitor` / `doorbell` / `ring` | sets `status.visitorDetected` + `status.doorbellRing` (auto-pulses 1 s) and sends `Visitor` to Loxone. If Intercom is enabled, also sends the RTSP URL |
-| `md` / `motion` | sets `status.motionDetected` + `lastMotionTime` and sends `Motion` to Loxone |
-| `people` / `person` | sets `status.personDetected` and sends `AI_person` |
-| `vehicle` | sets `status.vehicleDetected` and sends `AI_vehicle` |
-| `dog_cat` / `animal` | sets `status.animalDetected` and sends `AI_animal` |
+| digital on/off | `…/cmd/taras.control.whiteLed/1` · `…/0` |
+| analog (Loxone inserts `<v>`) | `…/cmd/taras.control.whiteLedBrightness/<v>` |
+| NVR channel | `…/cmd/nvr.ch3.control.recording/0` |
 
-If the POST has an empty body (some doorbell firmwares do this on press) the request is treated as a `visitor` pulse — the source IP confirms which camera it came from.
+Accepted only from the Miniserver IP (Loxone tab) or the allowlist, guarded by the shared secret. Only writable `*.control.*` states are accepted; values are coerced to the state type. In **Loxone Config → Peripherals → Virtual Outputs** add an output with address `http://<iobroker>:<port>` and a command `/reolox/cmd/<state>/<value>?secret=…` (method `GET`).
 
-## Snapshot capture
+## Compatibility
 
-`control.snapshot` is a momentary button: write `true` to capture a JPEG. The result is:
+| Component | Tested with |
+|---|---|
+| ioBroker js-controller / admin | ≥ 5.0 / ≥ 6.0 |
+| Node.js | 18 · 20 · 22 |
+| Reolink cameras | v3.x firmware — CX810, CX820, Video Doorbell PoE, RLC-810A |
+| Reolink NVR | RLN8-410 verified (RLN16 / RLN36 should work) |
+| Loxone Miniserver | Gen 1 (Basic) · Gen 2 (Token Auth, HMAC-SHA1) |
 
-- saved to `<iobroker-data>/reolox.0/snapshots/<cam>.jpg` (same filename per camera, so the URL is hot-linkable)
-- mirrored as a `data:image/jpeg;base64,…` string in `snapshot.image`
-- timestamp recorded in `snapshot.timestamp`
-- file path published in `snapshot.file`
+## FAQ
 
-## PTZ control
+<details>
+<summary><b>Can I control cameras from Loxone without the simple-api adapter?</b></summary>
 
-Available only for cameras whose `GetAbility` reports PTZ support. Write to `ptz.command` to issue a movement (`Left`, `Right`, `Up`, `Down`, `LeftUp`, etc.). The current `ptz.speed` value (1–64) is applied. To jump to a preset write the index to `ptz.goToPreset`. To stop any motion write `true` to `ptz.stop`. `ptz.patrol` toggles auto patrol on or off.
+Yes. The built-in control endpoint (see *Loxone integration*) lets a Loxone Virtual Output write any `*.control.*` state directly: `GET /reolox/cmd/<state.path>/<value>?secret=…`. It is enabled by default (Webhook tab → *Allow Loxone control commands*) and trusts the Miniserver IP automatically.
 
-## White LED & spotlight
+</details>
 
-If the camera reports `ledControl.permit > 0` in `GetAbility` (i.e. the API user has admin-level permission), the adapter exposes:
+<details>
+<summary><b>A camera shows offline / login fails.</b></summary>
 
-- `status.whiteLed` — live state polled from the camera
-- `control.whiteLed` — write target state (the adapter debounces user writes so the next poll does not flicker the value back)
+Confirm the camera user has the **Admin** role (Guest accounts usually cannot use the HTTP API). Check IP, port and TLS. Look for `Login error` in `iobroker logs reolox`.
 
-`SetWhiteLed` is called via the token-less direct-auth endpoint because some firmwares (notably CX810) reject the token form for this command.
+</details>
 
-If `ledControl.permit` is `0`, change the camera's API user to **Admin** role in the camera's web UI under *Device Settings → User Management*. Guest accounts cannot toggle the WhiteLed.
+<details>
+<summary><b>WhiteLed control does nothing.</b></summary>
 
-## Gate trigger
+The camera reports `ledControl.permit = 0` — the API user is not Admin. Promote it in the camera web UI: *Device Settings → User Management*. On CX810/CX820 the adapter already uses the minimal direct-auth `SetWhiteLed` payload these models require.
 
-The intent is: someone approaches the gate, taps something simple, the gate opens via Loxone. ReoLox currently ships **one** mechanism for this — the *WhiteLed knock-pattern*. It works but has limitations worth knowing about.
+</details>
 
-**How it works.** With *Gate* enabled in the Cameras tab the adapter polls `GetWhiteLed` on that camera at 1 Hz. If the WhiteLed turns ON and then OFF within 3 seconds the adapter treats the brief flash as an intentional knock and:
+<details>
+<summary><b>Doorbell button events don't arrive.</b></summary>
 
-- sets `status.whiteLedTrigger` to `true` (pulsed for 1 s)
-- sends `gate_trigger=1` to Loxone on `<prefix>_<camera>_gate_trigger`
+Either the firmware returns `GetDoorbell -9 not supported` (Doorbell PoE v3.0.0.4662) or 1 s polling is too slow for a button press. Enable the **Webhook server**, set the *ioBroker IP* and a *Shared secret*; the push URL is configured on the camera automatically. Verify the POSTs reach the server in the log.
 
-A user in front of the camera triggers it by tapping the WhiteLed in the Reolink mobile app (briefly turn ON, then OFF).
+</details>
 
-**Limitations.**
+<details>
+<summary><b>Webhook / control returns 403 or 401.</b></summary>
 
-- The Reolink API does not push WhiteLed state changes — the adapter has to poll. With a 1 s interval a very short tap can be missed if it falls between two samples.
-- `SetWhiteLed` requires the camera user to be Admin. Guest accounts cannot toggle it.
-- Cameras that do not expose `ledControl` (no spotlight hardware) cannot use this method.
-- App round-trip latency varies — 1–3 s from tap to detection is typical.
+**403** — source IP not allowed. Events accept the camera allowlist (`auto`); control additionally accepts the Miniserver IP. A request from your PC/browser is rejected by design. **401** — missing/wrong shared secret (note: this is the *Webhook* shared secret, not the camera password).
 
-**Recommended alternatives** if knock-pattern is too unreliable for you:
+</details>
 
-- **HTTP shortcut from phone.** Create an iOS *Shortcut* or Android *Tasker* action that POSTs to a small ioBroker REST endpoint or directly to the Loxone Miniserver Virtual Input. One tap from your home-screen — no polling, no camera involvement, latency under 200 ms.
-- **NFC tag at the gate.** Same idea, triggered by tapping a tag with the phone. Works without unlocking on most Android devices.
-- **Loxone Geofencing.** Configure a geo-zone in the Loxone app — the Miniserver receives the enter/exit event natively. Best for hands-free.
-- **AI-person detection in a zone.** Set up a motion zone covering only the approach path and use `status.personDetected` as the trigger. Works hands-free but is prone to false positives from delivery / neighbours.
+<details>
+<summary><b>AI detection is always false.</b></summary>
 
-If you want a dedicated webhook endpoint on the adapter (e.g. `POST /reolox/gate/<camera>?secret=…`) so the iOS Shortcut talks straight to ReoLox instead of Loxone — file an issue and it can be added.
+`person` / `vehicle` / `animal` work on CX810 / CX820 / Doorbell PoE / RLC-810A. `face` is reported as `support: 0` on these models, so the `AI_face` VI never fires — don't create it in Loxone for them.
 
-## Auto-discovery
+</details>
 
-The Cameras tab has a *🔍 Discover* button that runs an ONVIF WS-Discovery probe (UDP multicast to `239.255.255.250:3702`) and lists every Reolink device that responds. Each candidate is then probed with `GetDevInfo` to extract model, firmware and serial.
+<details>
+<summary><b>Loxone events don't arrive.</b></summary>
 
-The discovery feature only finds devices — it does not add them to the camera list automatically. Copy the IP and add a row manually.
+Check the *Loxone* tab is enabled, the host is reachable and credentials are correct. With Token Auth the first call performs the HMAC handshake (`Token acquired` in debug logs). `Token auth failed … falling back to Basic` simply means a Gen 1 / pre-v10.2 Miniserver — Basic still works.
 
-## Camera-specific notes
+</details>
 
-**Reolink CX810 / CX820**
+<details>
+<summary><b>How do I open a gate by tapping my phone?</b></summary>
 
-- AI detection is reported as available by `GetAbility` but the firmware exposes no usable AI states (`GetAiState` returns all-zero). The adapter creates the AI states for consistency but they never go true.
-- WhiteLed works only with an Admin user.
+The WhiteLed knock-pattern (*Gate* checkbox) works but relies on 1 Hz polling. More reliable: an iOS *Shortcut* / Android *Tasker* action (or NFC tag) that calls the control endpoint or a Loxone Virtual Input directly — sub-200 ms, no camera involvement. Loxone Geofencing is best for hands-free.
 
-**Reolink Video Doorbell PoE (FW v3.0.0.4662)**
+</details>
 
-- `GetDoorbell` returns `rspCode = -9 not supported`. The adapter detects this and falls back to webhook push for ring events. Make sure to enable the webhook server and point the camera's push URL at `http://<ioBroker>:7777/reolox/<cam>?secret=…`.
-- Two-way audio (intercom) is not part of ReoLox — use Loxone Intercom with the RTSP URL the bridge provides.
+## Advanced
 
-**Reolink RLC-810A and other PoE cameras**
+<details>
+<summary><b>Architecture & source layout</b></summary>
 
-- Standard behaviour. Motion + AI + snapshots + RTSP all work via the Reolink HTTP API.
+```
+                     ┌─────────────────────────────────────────────────┐
+   ┌───────────┐     │   ReolinkAPI ───────────── LoxoneBridge          │   ┌────────────────────┐
+   │  Reolink  │◄────┼──► (login SF, retry)        (HTTP token / UDP) ◄──┼──►│ Loxone Miniserver  │
+   │  cameras  │     │                                                  │   │ VIs · VOs · Touch  │
+   └───────────┘     │   WebhookServer ─────────── PollScheduler        │   └────────────────────┘
+   Reolink push ─POST┼──► (allowlist · secret ·    (jitter · mutex ·    │
+                     │     64 KB cap · /cmd)        backoff)            │
+                     │   TimerManager · CapabilityCache (disk, TTL)     │
+                     └──────────────────────┬──────────────────────────┘
+                                            ▼  ioBroker objects  (reolox.0.<cam>.*)
+```
 
-**ONVIF PullPoint** is **not** supported by current Reolink firmware (v3.x returns `SOAP-ENV:Client`). Earlier ReoLox versions tried to use it; the current release uses only the Reolink HTTP API plus optional push webhook.
+```
+main.js                 # adapter orchestrator
+lib/
+  reolink-api.js        # HTTP client per camera (token auth, retry/backoff, batch)
+  loxone-bridge.js      # Loxone HTTP (token/basic) + UDP
+  webhook-server.js     # /reolox/<cam> push receiver + /reolox/cmd control endpoint
+  poll-scheduler.js     # periodic task supervisor
+  timer-manager.js      # tracked setTimeout/setInterval
+  capability-cache.js   # GetAbility disk cache (firmware-aware)
+  discovery.js          # ONVIF WS-Discovery probe
+  safe-log.js           # CRLF / password / token redaction
+admin/jsonConfig.json   # admin UI (i18n: en/pl/de)
+test/                   # mocha + chai + nock, @iobroker/testing
+```
 
-## Troubleshooting
+</details>
 
-**Camera shows offline / login fails.** Confirm the camera user role is **Admin** (Guest accounts cannot log in via the HTTP API on most firmwares). Check the IP, port and TLS settings. Try `iobroker logs reolox --watch` and look for `Login error`.
+<details>
+<summary><b>Configuration reference — Loxone & Webhook tabs</b></summary>
 
-**WhiteLed control does nothing.** The camera reports `ledControl.permit = 0`. Change the API user to Admin in the camera's web UI: *Device Settings → User Management*.
+**Loxone tab:** Enable integration · Miniserver IP · HTTP port (80) · Username/Password (encrypted) · Authentication `Token` (recommended) or `Basic` · Communication mode `HTTP` / `UDP` / both · UDP port (7000) · Virtual Input prefix (`ReoLox`) · Enable Loxone Intercom (RTSP URL to `<prefix>_<camera>_intercom` on ring).
 
-**AI detection always false.** CX810 / CX820 firmware does not expose AI states. RLC-810A and Doorbell PoE do.
+**Webhook tab:** Enable server · Listen port (7777) · ioBroker IP (used to auto-configure each camera's push URL) · Shared secret (encrypted) · Source IP allowlist (`auto` = camera hosts, or explicit comma list) · **Allow Loxone control commands** (default on).
 
-**Doorbell button events not arriving.** Either `GetDoorbell` returns `-9 not supported` on this firmware, or polling is too slow. Enable the *Webhook server*, set the *ioBroker IP* and a *Shared secret*; the adapter will configure the camera's push URL automatically. Verify in the logs that the camera POSTs reach the server.
+**Request validation order:** method → path under `/reolox/` → source IP in allowlist → shared secret (constant-time) → body ≤ 64 KB (else `413`). The `/reolox/cmd/…` control route additionally accepts the Miniserver IP and `GET`.
 
-**Webhook POST returns 403.** Source IP not in the allowlist. Either set *Source IP allowlist* to `auto` (the default) so it follows the camera list, or add the IP explicitly.
+</details>
 
-**Webhook POST returns 401.** Missing or wrong shared secret. The auto-configured push URLs include it; if you changed the secret after first start, click *Save & Close* on the adapter config to re-push the URLs.
+<details>
+<summary><b>Object tree (per camera <code>reolox.0.&lt;cam&gt;</code>)</b></summary>
 
-**Snapshot fails.** Permission issue — confirm the API user has snapshot rights on the camera (most Admin users do).
+```
+info/      connection, model, name, firmware, serial, hardwareVersion, channelCount
+status/    motionDetected, personDetected, vehicleDetected, animalDetected, faceDetected,
+           lastMotionTime, visitorDetected, doorbellRing, whiteLed, whiteLedTrigger
+control/   snapshot, reboot, irLights(Auto/On/Off), whiteLed, whiteLedBrightness(0-100),
+           whiteLedMode, statusLed, recording, notificationsEnabled,
+           notify{Motion,Person,Vehicle,Animal,Visitor}, osdText, osdShowDateTime,
+           motionSensitivity(0-100), siren, audioAlarmDuration, audioAlarmSound
+ptz/       command, speed(1-64), goToPreset, patrol, stop          (only if PTZ supported)
+image/     brightness, contrast, saturation, sharpness (0-255)
+streams/   rtspMainPublic, rtspSubPublic (no credentials), snapshotProxy
+snapshot/  image(base64 data URL), timestamp, file
+storage/   hddCapacity, hddUsed (MB)
+loxone/    viMotion, viPerson, viVehicle, viOnline, viVisitor, viIntercom, viGateTrigger
+```
 
-**Loxone events not arriving.** Check the *Loxone* tab is enabled, the host is reachable, and credentials are correct. With Token Auth turned on the first call performs the HMAC handshake — look for `Token acquired` in the debug logs. If you see `Token auth failed (… ), falling back to Basic` your Miniserver is Gen 1 or pre-v10.2; that's fine, Basic still works.
+NVR rows expose `reolox.0.<nvr>.info.*` and per channel `reolox.0.<nvr>.chN.{info,status,control}.*`.
+Writable states (`control.*`, `ptz.*`, `image.*`) act on write; `control.whiteLed` is debounced 3 s so polling doesn't flicker the value back.
 
-**Adapter restarts on shutdown / unload.** Should not happen — all timers and the webhook server are tracked and cancelled deterministically. If you see it please file an issue with the full log.
+</details>
 
-## Known limitations
+<details>
+<summary><b>NVR support</b></summary>
 
-- **ONVIF PullPoint** unsupported by Reolink firmware v3.x — removed from the adapter
-- **`GetDoorbell`** returns `-9 not supported` on Reolink Video Doorbell PoE FW v3.0.0.4662 — webhook push covers this
-- **AI** on CX810 / CX820 not implemented in firmware
-- **Loxone Cloud Remote Connect** does not proxy local URLs — Intercom RTSP needs VPN or port forwarding to be reachable away from home
-- **MJPEG re-streaming** is not part of ReoLox; if Loxone Intercom needs MJPEG (some Touch panels do) deploy a separate `go2rtc` instance and point Loxone at it directly
-- **Reolink HTTP API** is undocumented officially; this adapter is reverse-engineered from the official mobile app and community knowledge. Firmware updates can change behaviour without notice
+A Reolink NVR is a single row with the **NVR** flag. At startup ReoLox reads `GetDevInfo` + `GetChannelstatus`, then for each online channel creates an info/status/control sub-tree. One poller batches `GetMdState` + `GetAiState` for **all** online channels into a single HTTP request per cycle. On a token expiry the batch re-logins once; if it still returns nothing the NVR is marked offline.
 
-## Development
+Loxone VIs are `<prefix>_<nvrName>_<channelName>_<event>` (e.g. `ReoLox_NVR_Front_AI_person`). A camera attached to an NVR can also be added as a standalone row; use **→ Loxone** on the NVR row to keep its state tree but silence duplicate VIs.
+
+</details>
+
+<details>
+<summary><b>Webhook server & push events</b></summary>
+
+Each camera's `SetPushV20` is configured to POST to `http://<ioBroker-IP>:<port>/reolox/<cameraName>?secret=…`, set automatically at startup. Firmware without `SetPushV20` (Doorbell PoE v3.0.0.4662) falls back to polling; configure the URL manually under *Alarm → Push* if needed.
+
+Recognised types: `visitor`/`doorbell`/`ring` (→ visitorDetected + doorbellRing, 1 s pulse, Intercom RTSP if enabled), `md`/`motion`, `people`/`person`, `vehicle`, `dog_cat`/`animal`. An empty POST body (some doorbells) is treated as a visitor pulse, resolved by source IP.
+
+</details>
+
+<details>
+<summary><b>Loxone Token Auth handshake</b></summary>
+
+1. `GET /jdev/sys/getkey2/<user>` → `{ key, salt, hashAlg }`
+2. `pwHash = uppercase(SHA1(password + ":" + salt))`
+3. `hmac = HMAC-SHA1(key, user + ":" + pwHash)`
+4. `GET /jdev/sys/getjwt/<hmac>/<user>/4/iobroker-reolox/iobroker` → token + `validUntil`
+5. subsequent calls append `?autht=<token>&user=<user>`
+
+The token is refreshed at 80 % of its lifetime. Any failure (typically Gen 1 Miniservers) falls back to Basic for the session.
+
+</details>
+
+<details>
+<summary><b>Snapshot · PTZ · White LED · Gate trigger</b></summary>
+
+**Snapshot** — write `true` to `control.snapshot`: JPEG saved to `<iobroker-data>/reolox.0/snapshots/<cam>.jpg`, mirrored as a base64 data URL in `snapshot.image`, with `snapshot.timestamp` / `snapshot.file`. For a still in Loxone, point a Picture element at a go2rtc frame URL; for notifications, send `snapshot.file` via Telegram from a script.
+
+**PTZ** — only when `GetAbility` reports PTZ. Write `ptz.command` (`Left`/`Right`/`Up`/`Down`/…/`Stop`/`Auto`) at `ptz.speed` (1–64); `ptz.goToPreset` jumps to an index; `ptz.stop` halts; `ptz.patrol` toggles patrol.
+
+**White LED** — exposed when `ledControl.permit > 0` (Admin user). `status.whiteLed` is polled; `control.whiteLed` writes a minimal `SetWhiteLed` payload (CX-series reject the full form with `rspCode -13`).
+
+**Gate trigger** — with *Gate* enabled the adapter polls `GetWhiteLed` at 1 Hz; a ≤ 3 s ON→OFF flash pulses `status.whiteLedTrigger` and sends `gate_trigger=1`. Polling means a very short tap can be missed — see the gate FAQ for faster alternatives.
+
+</details>
+
+<details>
+<summary><b>Camera-specific notes</b></summary>
+
+- **CX810 / CX820** — AI person/vehicle/animal work; `face` is unsupported (`support: 0`). WhiteLed needs an Admin user and uses the minimal payload (mode `3` for manual on; mode `1` is rejected).
+- **Video Doorbell PoE (v3.0.0.4662)** — `GetDoorbell -9 not supported`; use the webhook push path. Two-way audio is out of scope — use Loxone Intercom with the RTSP URL the bridge provides.
+- **RLC-810A & other PoE cameras** — standard behaviour, everything via the Reolink HTTP API.
+- **ONVIF PullPoint** is not supported by current Reolink firmware (returns `SOAP-ENV:Client`); only the HTTP API + push webhook are used. ONVIF WS-Discovery is still used by the *Discover* button.
+
+</details>
+
+<details>
+<summary><b>Known limitations</b></summary>
+
+- `GetDoorbell` unsupported on Doorbell PoE v3.0.0.4662 (push covers it)
+- `face` AI not supported on CX-series
+- Loxone Cloud Remote Connect does not proxy local URLs — Intercom RTSP needs VPN / port forwarding away from home
+- MJPEG re-streaming is out of scope — deploy `go2rtc` separately if a Touch panel needs MJPEG
+- The Reolink HTTP API is unofficial; firmware updates may change behaviour
+
+</details>
+
+<details>
+<summary><b>Development</b></summary>
 
 ```bash
 git clone https://github.com/KPIotr89/ioBroker.reolox.git
 cd ioBroker.reolox
 npm install
 npm run lint
-npm test            # unit tests + package validation
+npm test            # unit (mocha/chai/nock) + package validation (@iobroker/testing)
 ```
 
-Test layout:
+CI (`.github/workflows/test-and-release.yml`) runs lint then the test matrix on every push and PR. `npm run test:integration` runs against a local ioBroker if installed.
 
-```
-test/unit/           mocha + chai + nock — lib/ modules
-test/package/        @iobroker/testing — io-package.json + package.json sanity
-.mocharc.yml         shared mocha config
-```
-
-CI (`.github/workflows/test-and-release.yml`) runs `lint` then the test matrix on every push and PR.
-
-To wire up a fresh instance against a real ioBroker for integration tests use `npm run test:integration` — this requires the adapter to be installed in a local ioBroker.
+</details>
 
 ## License
 
