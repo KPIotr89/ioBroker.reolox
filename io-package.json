@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.2.0",
+        "version": "2.3.0",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -75,6 +75,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.3.0": {
+                "en": "Built-in HTTP control endpoint: Loxone Virtual Outputs can now drive any control state directly (GET <prefix>/cmd/<state.path>/<value>) — no extra adapter (simple-api) needed. Secured by the webhook shared secret and the Miniserver IP. New option controlApiEnabled (default on).",
+                "de": "Eingebauter HTTP-Steuer-Endpunkt: Loxone Virtuelle Ausgaenge steuern jeden control-State direkt (GET <prefix>/cmd/<state.path>/<value>) — ohne Zusatzadapter (simple-api). Abgesichert ueber Webhook-Shared-Secret und Miniserver-IP. Neue Option controlApiEnabled (Standard an).",
+                "pl": "Wbudowany endpoint HTTP do sterowania: Wirtualne Wyjscia Loxone moga sterowac kazdym stanem control bezposrednio (GET <prefix>/cmd/<state.path>/<value>) — bez dodatkowego adaptera (simple-api). Zabezpieczone shared secret webhooka i IP Miniservera. Nowa opcja controlApiEnabled (domyslnie wlaczona)."
+            },
             "2.2.0": {
                 "en": "Camera control (Phase 1): status LED, recording, master + per-type push, WhiteLed on/off/brightness/mode, OSD, motion sensitivity, audio alarm. NVR per-channel control (Phase 2): recording, motion, AI, push under <nvr>.chN.control.*. Fixes: WhiteLed on/off uses the minimal CX-series payload; standalone offline detection (Online no longer stuck on 1); NVR batch re-login on token expiry; capability cache invalidates on firmware change. Removed unused Advanced options (snapshot on motion, retention, debug mode).",
                 "de": "Kamerasteuerung (Phase 1): Status-LED, Aufnahme, Master- und Typ-Push, WhiteLed An/Aus/Helligkeit/Modus, OSD, Bewegungsempfindlichkeit, Audio-Alarm. NVR-Steuerung pro Kanal (Phase 2): Aufnahme, Bewegung, KI, Push unter <nvr>.chN.control.*. Fixes: WhiteLed An/Aus mit minimalem CX-Payload; Offline-Erkennung Standalone (Online nicht mehr auf 1 haengen); NVR-Batch-Re-Login bei Token-Ablauf; Capability-Cache invalidiert bei Firmware-Wechsel. Entfernt: ungenutzte Advanced-Optionen (Snapshot bei Bewegung, Retention, Debug-Modus).",
@@ -110,6 +115,7 @@
         "webhookHost": "",
         "webhookSharedSecret": "",
         "webhookIpAllowlist": "auto",
+        "controlApiEnabled": true,
         "capabilityCacheTtlHours": 24,
         "loxoneVIList": [],
         "discoveredCameras": []

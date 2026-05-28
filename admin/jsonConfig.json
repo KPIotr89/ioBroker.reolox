@@ -327,9 +327,16 @@
                     "hidden": "!data.webhookEnabled",
                     "help": "`auto` = accept only the IPs of cameras configured in the Cameras tab. Otherwise comma-separated IPs (e.g. `192.168.0.48, 192.168.0.49`)."
                 },
+                "controlApiEnabled": {
+                    "type": "checkbox",
+                    "label": "Allow Loxone control commands (HTTP)",
+                    "default": true,
+                    "hidden": "!data.webhookEnabled",
+                    "help": "Lets a Loxone Virtual Output drive any control state directly via this server: GET /reolox/cmd/<state.path>/<value>. The Miniserver IP (from the Loxone tab) is trusted automatically; the shared secret above still applies. No simple-api adapter needed."
+                },
                 "_webhookInfo": {
                     "type": "staticText",
-                    "text": "**How it works**\n\nWhen ioBroker IP, port and shared secret are set, the adapter automatically sets the push URL on each camera at startup.\n\nCameras POST to:\n`http://{ioBroker-IP}:{port}/reolox/{CameraName}?secret=****`\n\nEvents handled: **visitor** (doorbell button), **motion**, **person**, **vehicle**, **animal**.\n\nThe server validates:\n  • POST method only\n  • path must start with `/reolox/`\n  • source IP must be in the allowlist (auto-derived by default)\n  • shared secret matches (constant-time comparison)\n  • body ≤ 64 KB (oversize requests get HTTP 413).\n\n**Manual setup** — if auto-config fails or firmware is older:\nCamera web UI → Alarm → Push → set URL to the address above.",
+                    "text": "**How it works**\n\nWhen ioBroker IP, port and shared secret are set, the adapter automatically sets the push URL on each camera at startup.\n\nCameras POST to:\n`http://{ioBroker-IP}:{port}/reolox/{CameraName}?secret=****`\n\nEvents handled: **visitor** (doorbell button), **motion**, **person**, **vehicle**, **animal**.\n\nThe server validates:\n  • POST method only\n  • path must start with `/reolox/`\n  • source IP must be in the allowlist (auto-derived by default)\n  • shared secret matches (constant-time comparison)\n  • body ≤ 64 KB (oversize requests get HTTP 413).\n\n**Manual setup** — if auto-config fails or firmware is older:\nCamera web UI → Alarm → Push → set URL to the address above.\n\n**Control from Loxone (no simple-api)**\n\nWith *Allow Loxone control commands* on, a Loxone Virtual Output can write any control state:\n`http://{ioBroker-IP}:{port}/reolox/cmd/{Camera}.control.whiteLed/1?secret=****`\nAnalog (Loxone inserts `<v>`): `…/cmd/{Camera}.control.whiteLedBrightness/<v>?secret=****`\nNVR channel: `…/cmd/{NVR}.ch3.control.recording/0?secret=****`\nAllowed from the Miniserver IP (Loxone tab) or the allowlist; only `*.control.*` states are writable.",
                     "hidden": "!data.webhookEnabled",
                     "style": {
                         "marginTop": "16px",

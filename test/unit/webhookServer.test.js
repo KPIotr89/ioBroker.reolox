@@ -23,6 +23,19 @@ function post(port, path, body, headers = {}) {
     });
 }
 
+/** Helper: GET to localhost and resolve { status, body }. */
+function get(port, path, headers = {}) {
+    return new Promise((resolve, reject) => {
+        const req = http.request({ host: '127.0.0.1', port, path, method: 'GET', headers }, (res) => {
+            const chunks = [];
+            res.on('data', (c) => chunks.push(c));
+            res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+        });
+        req.on('error', reject);
+        req.end();
+    });
+}
+
 function listen(opts) {
     const srv = new WebhookServer({
         port: 0, // ask OS for a free port via direct start
@@ -127,6 +140,87 @@ describe('WebhookServer', () => {
         });
         const res = await post(port, '/admin/restart', {});
         expect(res.status).to.equal(404);
+        await srv.stop();
+    });
+
+    it('control: GET sets value via onControl with secret + allowed IP', async () => {
+        let captured;
+        const { srv, port } = await startOnFreePort({
+            ipAllowlist: ['127.0.0.1'],
+            sharedSecret: 'sec',
+            onEvent: () => {},
+            onControl: (statePath, value) => { captured = { statePath, value }; },
+        });
+        const res = await get(port, '/reolox/cmd/taras.control.whiteLed/1?secret=sec');
+        expect(res.status).to.equal(200);
+        await new Promise((r) => setTimeout(r, 30));
+        expect(captured.statePath).to.equal('taras.control.whiteLed');
+        expect(captured.value).to.equal('1');
+        await srv.stop();
+    });
+
+    it('control: trusts extraAllowed (Loxone IP) outside the event allowlist', async () => {
+        let captured;
+        const { srv, port } = await startOnFreePort({
+            ipAllowlist: ['10.0.0.1'],       // camera-only allowlist
+            extraAllowed: ['127.0.0.1'],     // Loxone Miniserver
+            onEvent: () => {},
+            onControl: (statePath, value) => { captured = { statePath, value }; },
+        });
+        const res = await get(port, '/reolox/cmd/nvr.ch3.control.recording/0');
+        expect(res.status).to.equal(200);
+        await new Promise((r) => setTimeout(r, 30));
+        expect(captured.statePath).to.equal('nvr.ch3.control.recording');
+        expect(captured.value).to.equal('0');
+        await srv.stop();
+    });
+
+    it('control: 401 on wrong secret (and onControl not called)', async () => {
+        let called = false;
+        const { srv, port } = await startOnFreePort({
+            ipAllowlist: ['127.0.0.1'],
+            sharedSecret: 'sec',
+            onEvent: () => {},
+            onControl: () => { called = true; },
+        });
+        const res = await get(port, '/reolox/cmd/taras.control.whiteLed/1?secret=nope');
+        expect(res.status).to.equal(401);
+        expect(called).to.equal(false);
+        await srv.stop();
+    });
+
+    it('control: 403 when source IP not allowed', async () => {
+        const { srv, port } = await startOnFreePort({
+            ipAllowlist: ['10.0.0.1'],
+            onEvent: () => {},
+            onControl: () => {},
+        });
+        const res = await get(port, '/reolox/cmd/taras.control.whiteLed/1');
+        expect(res.status).to.equal(403);
+        await srv.stop();
+    });
+
+    it('control: 403 rejects non-control paths', async () => {
+        let called = false;
+        const { srv, port } = await startOnFreePort({
+            ipAllowlist: ['127.0.0.1'],
+            onEvent: () => {},
+            onControl: () => { called = true; },
+        });
+        const res = await get(port, '/reolox/cmd/taras.info.connection/1');
+        expect(res.status).to.equal(403);
+        expect(called).to.equal(false);
+        await srv.stop();
+    });
+
+    it('control: 400 when value segment is missing', async () => {
+        const { srv, port } = await startOnFreePort({
+            ipAllowlist: ['127.0.0.1'],
+            onEvent: () => {},
+            onControl: () => {},
+        });
+        const res = await get(port, '/reolox/cmd/taras.control.whiteLed');
+        expect(res.status).to.equal(400);
         await srv.stop();
     });
 });

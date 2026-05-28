@@ -260,6 +260,22 @@ Server validation order on every request:
 
 If any of these fail the request is rejected without invoking the event dispatcher.
 
+### Control from Loxone (no extra adapter)
+
+The same server also accepts **control commands**, so a Loxone Virtual Output can write any control state directly — no `simple-api`/`rest-api` adapter in between (option *Allow Loxone control commands*, default on):
+
+```
+GET http://<iobroker>:<port>/reolox/cmd/<state.path>/<value>?secret=…
+```
+
+- digital: `…/cmd/taras.control.whiteLed/1` (on) · `…/cmd/taras.control.whiteLed/0` (off)
+- analog (Loxone substitutes `<v>`): `…/cmd/taras.control.whiteLedBrightness/<v>`
+- NVR channel: `…/cmd/nvr.ch3.control.recording/0`
+
+Accepted only from the Loxone Miniserver IP (*Loxone* tab) or the allowlist, with the shared secret. Only writable `*.control.*` states can be set; the value is coerced to the state's type and written with `ack=false`, so the normal command pipeline forwards it to the camera/NVR.
+
+In **Loxone Config → Peripherals → Virtual Outputs**: add a Virtual Output with address `http://<iobroker>:<port>`, then a Virtual Output Command — *command on* `/reolox/cmd/taras.control.whiteLed/1?secret=…`, *command off* `/reolox/cmd/taras.control.whiteLed/0?secret=…`, HTTP method `GET`.
+
 ## Object tree
 
 For a camera named `<cam>` the adapter creates the following objects under `reolox.0.<cam>`:

@@ -2,6 +2,20 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] — 2026-05-28
+
+### Added
+- **Built-in HTTP control endpoint** — the existing webhook server now also accepts control commands, so a **Loxone Virtual Output can drive any control state directly**, with no `simple-api`/`rest-api` adapter in between:
+  - `GET|POST http://<iobroker>:<port>/reolox/cmd/<state.path>/<value>`
+  - digital example: `…/cmd/taras.control.whiteLed/1`
+  - analog example (Loxone substitutes `<v>`): `…/cmd/taras.control.whiteLedBrightness/<v>`
+  - NVR channel: `…/cmd/nvr.ch3.control.recording/0`
+  - The value is coerced to the target state's type and written with `ack=false`, so it flows through the normal `onStateChange` → camera pipeline.
+- New option **`controlApiEnabled`** (default `true`, Webhook tab) to enable/disable the control endpoint.
+
+### Security
+- The control endpoint is guarded by the **webhook shared secret** (constant-time check) and an IP check: the **Loxone Miniserver IP** (from the Loxone tab) is trusted automatically, in addition to the camera allowlist. Only ids containing `.control.` that resolve to an existing **writable** state are accepted — arbitrary state writes are rejected.
+
 ## [2.2.0] — 2026-05-28
 
 ### Added

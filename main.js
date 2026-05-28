@@ -963,6 +963,11 @@ class ReoLoxAdapter extends utils.Adapter {
             pathPrefix: '/reolox',
             log: this.log,
             onEvent: (camId, sourceIp, events) => this._dispatchWebhook(camId, sourceIp, events),
+            // Control endpoint (Loxone Virtual Output → camera). The Miniserver IP is
+            // trusted on top of the camera allowlist; a shared secret is still honoured.
+            controlEnabled: this.config.controlApiEnabled !== false,
+            extraAllowed: this.config.loxoneHost ? [String(this.config.loxoneHost).trim()] : [],
+            onControl: (statePath, value) => this._applyLoxoneControl(statePath, value),
         });
         try {
             await this.webhookServer.start();
@@ -970,6 +975,41 @@ class ReoLoxAdapter extends utils.Adapter {
             this.log.error(`Webhook server failed to start on port ${this.config.webhookPort}: ${sanitize(e.message)}`);
             this.webhookServer = null;
         }
+    }
+
+    /**
+     * Apply a control command received over the HTTP control endpoint
+     * (Loxone Virtual Output → <prefix>/cmd/<state.path>/<value>). Writes the
+     * matching writable control state with ack=false so the normal onStateChange
+     * pipeline forwards it to the camera/NVR — no extra adapter (simple-api) needed.
+     */
+    async _applyLoxoneControl(statePath, rawValue) {
+        if (!/\.control\./.test(statePath)) {
+            this.log.warn(`Control: refused non-control path "${sanitize(statePath)}"`);
+            return;
+        }
+        let obj = null;
+        try { obj = await this.getObjectAsync(statePath); } catch (_) { obj = null; }
+        if (!obj || !obj.common || obj.common.write !== true) {
+            this.log.warn(`Control: unknown or read-only state "${sanitize(statePath)}"`);
+            return;
+        }
+        const val = this._coerceValue(rawValue, obj.common.type);
+        this.log.info(`Control (HTTP) → ${sanitize(statePath)} = ${sanitize(String(val))}`);
+        // ack=false → onStateChange runs the existing per-control camera logic.
+        await this.setStateAsync(statePath, val, false).catch((e) =>
+            this.log.warn(`Control: setState ${sanitize(statePath)} failed: ${sanitize(e.message)}`),
+        );
+    }
+
+    /** Coerce a raw string from the HTTP control endpoint to the target state's type. */
+    _coerceValue(raw, type) {
+        if (type === 'boolean') {
+            const s = String(raw).trim().toLowerCase();
+            return s === '1' || s === 'true' || s === 'on' || s === 'yes';
+        }
+        if (type === 'number') return Number(raw);
+        return String(raw);
     }
 
     async _dispatchWebhook(camId, sourceIp, events) {
