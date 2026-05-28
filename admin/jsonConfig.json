@@ -110,11 +110,12 @@
                     "label": "🔍 Discover Reolink cameras on network",
                     "jsonData": "{\"timeout\":5000}",
                     "showProcess": true,
+                    "useNative": true,
+                    "result": { "discoveredCameras": "result" },
                     "style": { "marginBottom": "12px" }
                 },
                 "_cameraHelp": {
                     "type": "staticText",
-                    "label": "",
                     "text": "ℹ️  WhiteLed / spotlight control requires the camera user account to have **Admin** role (not Guest). Change it in the camera Device Settings → User Management. Camera passwords are stored encrypted in the adapter native settings.",
                     "style": {
                         "marginTop": "12px",
@@ -257,7 +258,6 @@
                 },
                 "_loxoneInfo": {
                     "type": "staticText",
-                    "label": "",
                     "text": "**Virtual Input naming convention**\n\nCreate these inputs in Loxone Config (names are case-sensitive). Prefix is configurable above; the default is `ReoLox`.\n\n`ReoLox_{Name}_Motion` — motion detected\n`ReoLox_{Name}_AI_person` — person (AI)\n`ReoLox_{Name}_AI_vehicle` — vehicle (AI)\n`ReoLox_{Name}_AI_animal` — animal (AI)\n`ReoLox_{Name}_Online` — camera online (1/0)\n`ReoLox_{Name}_Visitor` — doorbell pressed (1/0)\n`ReoLox_{Name}_gate_trigger` — gate trigger pulse (1)\n`ReoLox_{Name}_intercom` — RTSP URL string on ring (Loxone Intercom)\n\nThe exact VI names for each camera are visible in `<camId>.loxone.*` states after the instance starts.",
                     "hidden": "!data.loxoneEnabled",
                     "style": {
@@ -313,7 +313,6 @@
                 },
                 "_webhookInfo": {
                     "type": "staticText",
-                    "label": "",
                     "text": "**How it works**\n\nWhen ioBroker IP, port and shared secret are set, the adapter automatically sets the push URL on each camera at startup.\n\nCameras POST to:\n`http://{ioBroker-IP}:{port}/reolox/{CameraName}?secret=****`\n\nEvents handled: **visitor** (doorbell button), **motion**, **person**, **vehicle**, **animal**.\n\nThe server validates:\n  • POST method only\n  • path must start with `/reolox/`\n  • source IP must be in the allowlist (auto-derived by default)\n  • shared secret matches (constant-time comparison)\n  • body ≤ 64 KB (oversize requests get HTTP 413).\n\n**Manual setup** — if auto-config fails or firmware is older:\nCamera web UI → Alarm → Push → set URL to the address above.",
                     "hidden": "!data.webhookEnabled",
                     "style": {

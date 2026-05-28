@@ -794,9 +794,15 @@ class ReoLoxAdapter extends utils.Adapter {
                     timeoutMs: (msg.message && msg.message.timeout) || 5000,
                     log: this.log,
                 });
-                this.sendTo(msg.from, msg.command, { result: found, error: null }, msg.callback);
+                const summary = found.length
+                    ? `Found ${found.length} camera(s): ${found.map((c) => `${c.model || 'Reolink'}@${c.ip}`).join(', ')}`
+                    : 'No Reolink cameras found on the network';
+                this.log.info(`Discovery: ${summary}`);
+                this.sendTo(msg.from, msg.command, { result: found, native: { discoveredCameras: found }, message: summary }, msg.callback);
             } catch (e) {
-                this.sendTo(msg.from, msg.command, { result: [], error: sanitize(e.message) }, msg.callback);
+                const errMsg = sanitize(e.message);
+                this.log.warn(`Discovery error: ${errMsg}`);
+                this.sendTo(msg.from, msg.command, { result: [], error: errMsg, message: `Discovery failed: ${errMsg}` }, msg.callback);
             }
         } else if (msg.command === 'getLoxoneVIs') {
             // Build a per-camera list of Virtual Input names the user should create

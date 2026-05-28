@@ -104,7 +104,8 @@
         "snapshotRetention": 24,
         "capabilityCacheTtlHours": 24,
         "debugMode": false,
-        "loxoneVIList": []
+        "loxoneVIList": [],
+        "discoveredCameras": []
     },
     "objects": [],
     "instanceObjects": []
