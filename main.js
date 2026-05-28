@@ -369,7 +369,7 @@ class ReoLoxAdapter extends utils.Adapter {
         if (this._hasCapability(camId, 'whiteLed')) {
             await this._state(camId, 'control.whiteLed', 'White LED / spotlight', 'boolean', 'switch.light', false, true);
             await this._state(camId, 'control.whiteLedBrightness', 'White LED brightness (0-100)', 'number', 'level.dimmer', 100, true, { min: 0, max: 100, unit: '%' });
-            await this._state(camId, 'control.whiteLedMode', 'White LED mode', 'string', 'text', 'Manual', true, { states: { AutoNight: 'Auto (night)', Manual: 'Manual', Schedule: 'Schedule' } });
+            await this._state(camId, 'control.whiteLedMode', 'White LED mode (Manual=on / AutoNight=auto)', 'string', 'text', 'Manual', true, { states: { AutoNight: 'Auto (night)', Manual: 'Manual (on)' } });
             await this._state(camId, 'status.whiteLed', 'White LED state', 'boolean', 'sensor', false, false);
             await this._state(camId, 'status.whiteLedTrigger', 'Gate trigger (≤3s WhiteLed flash detected)', 'boolean', 'sensor', false, false);
         }
@@ -499,7 +499,7 @@ class ReoLoxAdapter extends utils.Adapter {
                 const r = await api.getWhiteLed(ch);
                 const wl = (r && r.WhiteLed) || r || {};
                 if (wl.bright !== undefined) await this.setStateAsync(`${camId}.control.whiteLedBrightness`, Number(wl.bright), true);
-                const modeNames = { 0: 'AutoNight', 1: 'Manual', 3: 'Schedule' };
+                const modeNames = { 0: 'AutoNight', 1: 'Manual', 3: 'Manual' };
                 if (wl.mode !== undefined) await this.setStateAsync(`${camId}.control.whiteLedMode`, modeNames[wl.mode] || 'Manual', true);
             } catch (_) { /* skip */ }
         }
@@ -1134,8 +1134,9 @@ class ReoLoxAdapter extends utils.Adapter {
                     catch (e) { this.log.warn(`Camera "${camId}" setWhiteLedConfig brightness failed: ${sanitize(e.message)}`); }
                     break;
                 case 'control.whiteLedMode': {
-                    const modeMap = { AutoNight: 0, Manual: 1, Schedule: 3 };
-                    const mode = modeMap[String(state.val)] ?? 1;
+                    // CX810/CX820 reject mode=1; the actual 'manual on' mode on these cameras is 3.
+                    const modeMap = { AutoNight: 0, Manual: 3, Schedule: 3 };
+                    const mode = modeMap[String(state.val)] ?? 3;
                     try { await api.setWhiteLedConfig(ch, { mode }); await this.setStateAsync(id, String(state.val), true); }
                     catch (e) { this.log.warn(`Camera "${camId}" setWhiteLedConfig mode failed: ${sanitize(e.message)}`); }
                     break;
