@@ -100,6 +100,14 @@
                             "default": false,
                             "width": "70px",
                             "tooltip": "Mark this camera as a doorbell. Forces visitor/doorbell capability on (some firmware misreports GetDoorbell). Visitor events arrive via webhook push and are sent to <prefix>_<cam>_Visitor as a 1 s pulse."
+                        },
+                        {
+                            "type": "checkbox",
+                            "attr": "isNvr",
+                            "label": "NVR",
+                            "default": false,
+                            "width": "55px",
+                            "tooltip": "Mark this row as a Reolink NVR (e.g. RLN8-410). ReoLox pulls the channel list from the device on startup and creates per-channel sub-states under reolox.0.<nvr>.chN.*"
                         }
                     ],
                     "default": []

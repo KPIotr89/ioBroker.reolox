@@ -166,6 +166,10 @@ class ReoLoxAdapter extends utils.Adapter {
 
     async initCamera(camConfig) {
         const camId = this.sanitizeId(camConfig.name || `cam_${camConfig.host}`);
+        // NVR rows go through a different init path — they enumerate per-channel sub-states.
+        if (camConfig.isNvr) {
+            return this._initNvr(camConfig, camId);
+        }
         this.log.info(`Initialising camera "${camId}" at ${sanitize(camConfig.host)}…`);
 
         const api = new ReolinkAPI({
@@ -569,6 +573,85 @@ class ReoLoxAdapter extends utils.Adapter {
         if (this.lastStates.get(mapKey) === value) return;
         this.lastStates.set(mapKey, value);
         try { await fn(); } catch (e) { this.log.debug(`emitChange ${mapKey} failed: ${sanitize(e.message)}`); }
+    }
+
+    // ─── NVR INIT ─────────────────────────────────────────────────────────
+
+    /**
+     * Initialise a Reolink NVR (e.g. RLN8-410). Pulls device info + channel list and
+     * creates one sub-device per active channel under reolox.0.<nvrId>.chN.*.
+     * Polling motion/AI per channel and webhook dispatch land in Stage 2 of NVR support.
+     */
+    async _initNvr(camConfig, nvrId) {
+        this.log.info(`Initialising NVR "${nvrId}" at ${sanitize(camConfig.host)}…`);
+        const api = new ReolinkAPI({
+            host: camConfig.host,
+            port: camConfig.port || (camConfig.useHttps ? 443 : 80),
+            username: camConfig.username,
+            password: camConfig.password,
+            channel: 0,
+            useHttps: !!camConfig.useHttps,
+            log: this.log,
+        });
+        try {
+            await api.login();
+            this.cameras.set(nvrId, api);
+            this.camConfigs.set(nvrId, camConfig);
+
+            const devInfo = await api.getDevInfo();
+            const info = (devInfo && devInfo.DevInfo) || {};
+            this.log.info(`NVR "${nvrId}" connected: ${sanitize(info.model || '?')} FW=${sanitize(info.firmVer || '?')} channels=${info.channelNum || '?'}`);
+
+            // Device root
+            await this.setObjectNotExistsAsync(nvrId, {
+                type: 'device',
+                common: { name: camConfig.name || nvrId },
+                native: { host: camConfig.host, isNvr: true },
+            });
+            await this._channel(nvrId, 'info', 'NVR Information');
+            await this._state(nvrId, 'info.connection', 'Connection status', 'boolean', 'indicator.connected', false, false);
+            await this._state(nvrId, 'info.model', 'NVR model', 'string', 'info.name', '', false);
+            await this._state(nvrId, 'info.firmware', 'Firmware version', 'string', 'info.firmware', '', false);
+            await this._state(nvrId, 'info.channelCount', 'Total channels', 'number', 'value', 0, false);
+            await this._state(nvrId, 'info.activeChannels', 'Online channels', 'number', 'value', 0, false);
+            await this.setStateAsync(`${nvrId}.info.connection`, true, true);
+            await this.setStateAsync(`${nvrId}.info.model`, info.model || '', true);
+            await this.setStateAsync(`${nvrId}.info.firmware`, info.firmVer || '', true);
+            await this.setStateAsync(`${nvrId}.info.channelCount`, info.channelNum || 0, true);
+
+            // Channel discovery
+            let chStatus;
+            try { chStatus = await api.getChannelStatus(); }
+            catch (e) { this.log.warn(`NVR "${nvrId}" channel discovery failed: ${sanitize(e.message)}`); return; }
+            const list = (chStatus && chStatus.status) || [];
+            const active = list.filter((c) => c && c.online === 1);
+            await this.setStateAsync(`${nvrId}.info.activeChannels`, active.length, true);
+
+            const names = active.map((c) => `ch${c.channel}=${sanitize(c.name)}`).join(', ');
+            this.log.info(`NVR "${nvrId}": ${active.length}/${list.length} channels online — ${names}`);
+
+            for (const ch of list) {
+                const chId = `${nvrId}.ch${ch.channel}`;
+                await this.setObjectNotExistsAsync(chId, {
+                    type: 'channel',
+                    common: { name: ch.name || `Channel ${ch.channel}` },
+                    native: { channel: ch.channel },
+                });
+                await this._state(nvrId, `ch${ch.channel}.info.name`, 'Camera name', 'string', 'info.name', '', false);
+                await this._state(nvrId, `ch${ch.channel}.info.uid`, 'Reolink UID', 'string', 'text', '', false);
+                await this._state(nvrId, `ch${ch.channel}.info.online`, 'Camera online (per NVR)', 'boolean', 'indicator.connected', false, false);
+                await this._state(nvrId, `ch${ch.channel}.info.sleep`, 'Camera sleeping (battery models)', 'boolean', 'sensor', false, false);
+                await this.setStateAsync(`${chId}.info.name`, ch.name || '', true);
+                await this.setStateAsync(`${chId}.info.uid`, ch.uid || '', true);
+                await this.setStateAsync(`${chId}.info.online`, ch.online === 1, true);
+                await this.setStateAsync(`${chId}.info.sleep`, ch.sleep === 1, true);
+            }
+
+            this.log.info(`NVR "${nvrId}" Stage 1 ready. (Stage 2 — per-channel motion/AI polling — comes in v2.3.)`);
+        } catch (err) {
+            this.log.error(`NVR "${nvrId}" init failed: ${sanitize(err.message)}`);
+            await this.setStateAsync(`${nvrId}.info.connection`, false, true).catch(() => undefined);
+        }
     }
 
     // ─── WEBHOOK ──────────────────────────────────────────────────────────
