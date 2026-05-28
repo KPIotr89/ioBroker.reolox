@@ -702,6 +702,16 @@ class ReoLoxAdapter extends utils.Adapter {
             return;
         }
         await this.setStateAsync(`${nvrId}.info.connection`, true, true);
+        // Heartbeat Online=1 to Loxone: emit on change OR refresh every HEARTBEAT_INTERVAL_MS
+        const lastBeatKey = `${nvrId}.onlineHeartbeat`;
+        const lastBeatAt = this.lastStates.get(lastBeatKey) || 0;
+        const wasOnline = this.lastStates.get(`${nvrId}.online`);
+        const due = Date.now() - lastBeatAt >= HEARTBEAT_INTERVAL_MS;
+        if (wasOnline !== true || due) {
+            this.lastStates.set(`${nvrId}.online`, true);
+            this.lastStates.set(lastBeatKey, Date.now());
+            if (this.loxoneBridge) await this.loxoneBridge.sendStatus(camConfig.name || nvrId, true);
+        }
 
         // Each channel produces 2 sequential entries: [MdState, AiState]
         for (let i = 0; i < channels.length; i++) {
