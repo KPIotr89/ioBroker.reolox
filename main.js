@@ -194,6 +194,7 @@ class ReoLoxAdapter extends utils.Adapter {
             await this._detectCapabilities(camId, api, camConfig);
             await this._createCameraObjects(camId, camConfig, info);
             await this._updateStreamUrls(camId, camConfig, api);
+            await this._syncInitialControlState(camId, api, camConfig).catch((e) => this.log.debug(`Initial control sync failed for ${camId}: ${sanitize(e.message)}`));
 
             // Initial poll
             await this._pollMain(camId).catch((e) => this.log.debug(`Initial poll failed for ${camId}: ${sanitize(e.message)}`));
@@ -367,12 +368,35 @@ class ReoLoxAdapter extends utils.Adapter {
 
         if (this._hasCapability(camId, 'whiteLed')) {
             await this._state(camId, 'control.whiteLed', 'White LED / spotlight', 'boolean', 'switch.light', false, true);
+            await this._state(camId, 'control.whiteLedBrightness', 'White LED brightness (0-100)', 'number', 'level.dimmer', 100, true, { min: 0, max: 100, unit: '%' });
+            await this._state(camId, 'control.whiteLedMode', 'White LED mode', 'string', 'text', 'Manual', true, { states: { AutoNight: 'Auto (night)', Manual: 'Manual', Schedule: 'Schedule' } });
             await this._state(camId, 'status.whiteLed', 'White LED state', 'boolean', 'sensor', false, false);
             await this._state(camId, 'status.whiteLedTrigger', 'Gate trigger (≤3s WhiteLed flash detected)', 'boolean', 'sensor', false, false);
         }
         if (this._hasCapability(camId, 'siren')) {
             await this._state(camId, 'control.siren', 'Trigger siren/alarm', 'boolean', 'button', false, true);
+            await this._state(camId, 'control.audioAlarmDuration', 'Audio alarm duration (s)', 'number', 'level', 5, true, { min: 1, max: 30, unit: 's' });
+            await this._state(camId, 'control.audioAlarmSound', 'Audio alarm sound id', 'number', 'value', 1, true, { min: 0, max: 10 });
         }
+
+        // Status LED (PowerLed) — red front LED on most Reolink models.
+        await this._state(camId, 'control.statusLed', 'Front status LED on/off', 'boolean', 'switch.light', true, true);
+        // Recording on/off
+        await this._state(camId, 'control.recording', 'SD recording enabled', 'boolean', 'switch', true, true);
+        // Notifications
+        await this._state(camId, 'control.notificationsEnabled', 'Master push notifications', 'boolean', 'switch', true, true);
+        await this._state(camId, 'control.notifyMotion', 'Push on motion (MD)', 'boolean', 'switch', false, true);
+        await this._state(camId, 'control.notifyPerson', 'Push on AI person', 'boolean', 'switch', false, true);
+        await this._state(camId, 'control.notifyVehicle', 'Push on AI vehicle', 'boolean', 'switch', false, true);
+        await this._state(camId, 'control.notifyAnimal', 'Push on AI animal', 'boolean', 'switch', false, true);
+        if (this._hasCapability(camId, 'visitor') || camConfig.isDoorbell) {
+            await this._state(camId, 'control.notifyVisitor', 'Push on doorbell visitor', 'boolean', 'switch', true, true);
+        }
+        // OSD
+        await this._state(camId, 'control.osdText', 'OSD overlay text', 'string', 'text', '', true);
+        await this._state(camId, 'control.osdShowDateTime', 'OSD show date/time', 'boolean', 'switch', true, true);
+        // Motion sensitivity
+        await this._state(camId, 'control.motionSensitivity', 'Motion detection sensitivity (0-100)', 'number', 'level', 50, true, { min: 0, max: 100 });
 
         if (this._hasCapability(camId, 'ptz')) {
             await this._channel(camId, 'ptz', 'PTZ Control');
@@ -435,6 +459,71 @@ class ReoLoxAdapter extends utils.Adapter {
         await this.setStateAsync(`${camId}.streams.rtspSubPublic`, api.rtspUrlPublic(ch, 'sub'), true);
         // Where snapshots land — no credentials in this string.
         await this.setStateAsync(`${camId}.streams.snapshotProxy`, path.join(utils.getAbsoluteInstanceDataDir(this), 'snapshots', `${camId}.jpg`), true);
+    }
+
+    /**
+     * Read current control settings from the camera (PowerLed, Recording, Push, WhiteLed,
+     * OSD, MD sensitivity, AudioAlarm) and mirror them into ioBroker state with ack=true.
+     * Lets the UI / Loxone see the actual camera configuration after a restart.
+     */
+    async _syncInitialControlState(camId, api, camConfig) {
+        const ch = camConfig.channel || 0;
+        // PowerLed
+        try {
+            const r = await api.getPowerLed(ch);
+            const on = !!(r && r.value && r.value.PowerLed && r.value.PowerLed.state === 'On')
+                || !!(r && r.PowerLed && r.PowerLed.state === 'On');
+            await this.setStateAsync(`${camId}.control.statusLed`, on, true);
+        } catch (_) { /* skip */ }
+        // Recording
+        try {
+            const r = await api.getRec(ch);
+            const en = !!(r && r.Rec && r.Rec.schedule && r.Rec.schedule.enable);
+            await this.setStateAsync(`${camId}.control.recording`, en, true);
+        } catch (_) { /* skip */ }
+        // Push (master + per type)
+        try {
+            const p = await api.getPushTypes(ch);
+            await this.setStateAsync(`${camId}.control.notificationsEnabled`, !!p.enabled, true);
+            await this.setStateAsync(`${camId}.control.notifyMotion`, !!p.MD, true);
+            await this.setStateAsync(`${camId}.control.notifyPerson`, !!p.AI_PEOPLE, true);
+            await this.setStateAsync(`${camId}.control.notifyVehicle`, !!p.AI_VEHICLE, true);
+            await this.setStateAsync(`${camId}.control.notifyAnimal`, !!p.AI_DOG_CAT, true);
+            if (this._hasCapability(camId, 'visitor') || camConfig.isDoorbell) {
+                await this.setStateAsync(`${camId}.control.notifyVisitor`, !!p.VISITOR, true);
+            }
+        } catch (_) { /* skip */ }
+        // WhiteLed brightness + mode
+        if (this._hasCapability(camId, 'whiteLed')) {
+            try {
+                const r = await api.getWhiteLed(ch);
+                const wl = (r && r.WhiteLed) || r || {};
+                if (wl.bright !== undefined) await this.setStateAsync(`${camId}.control.whiteLedBrightness`, Number(wl.bright), true);
+                const modeNames = { 0: 'AutoNight', 1: 'Manual', 3: 'Schedule' };
+                if (wl.mode !== undefined) await this.setStateAsync(`${camId}.control.whiteLedMode`, modeNames[wl.mode] || 'Manual', true);
+            } catch (_) { /* skip */ }
+        }
+        // OSD text + datetime
+        try {
+            const r = await api.getOsd(ch);
+            const osd = (r && r.Osd) || {};
+            if (osd.osdChannel) await this.setStateAsync(`${camId}.control.osdText`, String(osd.osdChannel.name || ''), true);
+            if (osd.osdTime) await this.setStateAsync(`${camId}.control.osdShowDateTime`, !!osd.osdTime.enable, true);
+        } catch (_) { /* skip */ }
+        // MD sensitivity
+        try {
+            const sens = await api.getMdSensitivity(ch);
+            await this.setStateAsync(`${camId}.control.motionSensitivity`, Number(sens) || 0, true);
+        } catch (_) { /* skip */ }
+        // Audio alarm
+        if (this._hasCapability(camId, 'siren')) {
+            try {
+                const r = await api.getAudioAlarmState(ch);
+                const cfg = (r && r.AudioAlarmV20) || {};
+                if (cfg.duration !== undefined) await this.setStateAsync(`${camId}.control.audioAlarmDuration`, Number(cfg.duration), true);
+                if (cfg.sound_index !== undefined) await this.setStateAsync(`${camId}.control.audioAlarmSound`, Number(cfg.sound_index), true);
+            } catch (_) { /* skip */ }
+        }
     }
 
     // ─── POLLING ──────────────────────────────────────────────────────────
@@ -924,6 +1013,67 @@ class ReoLoxAdapter extends utils.Adapter {
                         catch (e) { this.log.debug(`Siren failed: ${sanitize(e.message)}`); }
                         await this.setStateAsync(id, false, true);
                     }
+                    break;
+                case 'control.statusLed':
+                    try { await api.setPowerLed(ch, !!state.val); await this.setStateAsync(id, !!state.val, true); }
+                    catch (e) { this.log.warn(`Camera "${camId}" setPowerLed failed: ${sanitize(e.message)}`); }
+                    break;
+                case 'control.recording':
+                    try { await api.setRecEnabled(ch, !!state.val); await this.setStateAsync(id, !!state.val, true); this.log.info(`Camera "${camId}": recording = ${state.val ? 'ON' : 'OFF'}`); }
+                    catch (e) { this.log.warn(`Camera "${camId}" setRecEnabled failed: ${sanitize(e.message)}`); }
+                    break;
+                case 'control.notificationsEnabled':
+                    try { await api.setPushEnabled(ch, !!state.val); await this.setStateAsync(id, !!state.val, true); this.log.info(`Camera "${camId}": notifications = ${state.val ? 'ON' : 'OFF'}`); }
+                    catch (e) { this.log.warn(`Camera "${camId}" setPushEnabled failed: ${sanitize(e.message)}`); }
+                    break;
+                case 'control.notifyMotion':
+                case 'control.notifyPerson':
+                case 'control.notifyVehicle':
+                case 'control.notifyAnimal':
+                case 'control.notifyVisitor': {
+                    const typeMap = {
+                        'control.notifyMotion': 'MD',
+                        'control.notifyPerson': 'AI_PEOPLE',
+                        'control.notifyVehicle': 'AI_VEHICLE',
+                        'control.notifyAnimal': 'AI_DOG_CAT',
+                        'control.notifyVisitor': 'VISITOR',
+                    };
+                    const reoType = typeMap[`${channel}.${stateName}`];
+                    try { await api.setPushScheduleType(ch, reoType, !!state.val); await this.setStateAsync(id, !!state.val, true); }
+                    catch (e) { this.log.warn(`Camera "${camId}" setPushScheduleType(${reoType}) failed: ${sanitize(e.message)}`); }
+                    break;
+                }
+                case 'control.whiteLedBrightness':
+                    this.userWriteAt.set(`${camId}.control.whiteLed`, Date.now());
+                    try { await api.setWhiteLedConfig(ch, { bright: Number(state.val) }); await this.setStateAsync(id, Number(state.val), true); }
+                    catch (e) { this.log.warn(`Camera "${camId}" setWhiteLedConfig brightness failed: ${sanitize(e.message)}`); }
+                    break;
+                case 'control.whiteLedMode': {
+                    const modeMap = { AutoNight: 0, Manual: 1, Schedule: 3 };
+                    const mode = modeMap[String(state.val)] ?? 1;
+                    try { await api.setWhiteLedConfig(ch, { mode }); await this.setStateAsync(id, String(state.val), true); }
+                    catch (e) { this.log.warn(`Camera "${camId}" setWhiteLedConfig mode failed: ${sanitize(e.message)}`); }
+                    break;
+                }
+                case 'control.osdText':
+                    try { await api.setOsdText(ch, String(state.val || '')); await this.setStateAsync(id, String(state.val || ''), true); }
+                    catch (e) { this.log.warn(`Camera "${camId}" setOsdText failed: ${sanitize(e.message)}`); }
+                    break;
+                case 'control.osdShowDateTime':
+                    try { await api.setOsdShowDateTime(ch, !!state.val); await this.setStateAsync(id, !!state.val, true); }
+                    catch (e) { this.log.warn(`Camera "${camId}" setOsdShowDateTime failed: ${sanitize(e.message)}`); }
+                    break;
+                case 'control.motionSensitivity':
+                    try { await api.setMdSensitivity(ch, Number(state.val)); await this.setStateAsync(id, Number(state.val), true); }
+                    catch (e) { this.log.warn(`Camera "${camId}" setMdSensitivity failed: ${sanitize(e.message)}`); }
+                    break;
+                case 'control.audioAlarmDuration':
+                    try { await api.setAudioAlarmConfig(ch, { duration: Number(state.val) }); await this.setStateAsync(id, Number(state.val), true); }
+                    catch (e) { this.log.warn(`Camera "${camId}" setAudioAlarmConfig duration failed: ${sanitize(e.message)}`); }
+                    break;
+                case 'control.audioAlarmSound':
+                    try { await api.setAudioAlarmConfig(ch, { sound: Number(state.val) }); await this.setStateAsync(id, Number(state.val), true); }
+                    catch (e) { this.log.warn(`Camera "${camId}" setAudioAlarmConfig sound failed: ${sanitize(e.message)}`); }
                     break;
                 case 'ptz.command': {
                     if (!this._hasCapability(camId, 'ptz')) break;
