@@ -988,8 +988,43 @@ class ReoLoxAdapter extends utils.Adapter {
                     note: note || '',
                 });
             };
+            // NVR row helper — VI uses <nvrName>_<channelName>
+            const pushNvrCh = (nvrName, channelName, suffix, note) => {
+                const safeNvr = String(nvrName || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+                const safeCh = String(channelName || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+                rows.push({
+                    camera: `${nvrName} / ${channelName}`,
+                    vi: `${prefix}_${safeNvr}_${safeCh}_${suffix}`,
+                    type: 'digital',
+                    note: note || '',
+                });
+            };
             for (const cam of cams) {
                 if (!cam || !cam.enabled) continue;
+                if (cam.isNvr) {
+                    // Expand NVR into one row per active channel.
+                    const nvrId = this.sanitizeId(cam.name || `nvr_${cam.host}`);
+                    const channels = this.lastStates.get(`${nvrId}.activeChannels`) || [];
+                    push(cam, 'Online', 'digital', 'NVR reachable');
+                    if (channels.length === 0) {
+                        rows.push({
+                            camera: cam.name || '',
+                            vi: '(restart adapter, then click Generate again)',
+                            type: '',
+                            note: 'NVR channels not yet discovered',
+                        });
+                        continue;
+                    }
+                    for (const ch of channels) {
+                        const chName = ch.name || `ch${ch.channel}`;
+                        pushNvrCh(cam.name, chName, 'Motion', 'Motion (NVR-side)');
+                        pushNvrCh(cam.name, chName, 'AI_person', 'AI person detected');
+                        pushNvrCh(cam.name, chName, 'AI_vehicle', 'AI vehicle detected');
+                        pushNvrCh(cam.name, chName, 'AI_animal', 'AI animal detected');
+                        pushNvrCh(cam.name, chName, 'AI_face', 'AI face detected');
+                    }
+                    continue;
+                }
                 push(cam, 'Motion', 'digital', 'Motion detected');
                 push(cam, 'Online', 'digital', 'Camera reachable (1/0)');
                 push(cam, 'whiteLed', 'digital', 'WhiteLed state');
