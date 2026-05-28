@@ -2,6 +2,27 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] — 2026-05-28
+
+### Added
+- **NVR support** (Reolink RLN8/RLN16/RLN36) — new `isNvr` flag per row. On startup ReoLox pulls the device info and `GetChannelstatus` and builds a per-channel state tree under `reolox.0.<nvr>.chN.{info,status}.*`. Per-channel polling fires `GetMdState` + `GetAiState` for every online channel in a single batch HTTP call. Loxone VIs named `<prefix>_<nvr>_<channel>_<event>`.
+- **`pushToLoxone` flag per row** (default `true`) — disable Loxone bridge for selected cameras/NVRs without removing the device or its polling. Useful when an NVR row would duplicate VIs already produced by standalone cameras.
+- **`isDoorbell` flag per row** — marks the row as a doorbell so the adapter trusts the webhook button-press path even when the firmware misreports `GetDoorbell` (e.g. Reolink Video Doorbell PoE v3.0.0.4662).
+- **VI list generator** in the Loxone tab — interactive table (camera / VI / type / note) populated from the live configuration. NVR rows expand into per-channel entries so a single click produces the full Loxone Config name list.
+- **Online heartbeat** every 60 s — Loxone Miniserver restarts no longer leave the `_Online` VI stuck on a stale 0; the adapter refreshes the value even when the connection state has not changed.
+- **Active `doorbellRing` events** — the doorbell ring state is now actively pushed to Loxone (`<prefix>_<cam>_doorbellRing`) in addition to the legacy `_Visitor` pulse.
+
+### Changed
+- **AI-only motion**: `GetMdState` polling dropped. The Motion VI now fires whenever any AI alarm fires (`person`, `vehicle`, `animal`, `face`). Reolink CX-series often reports `GetMdState = 0` even with AI active, so the previous logic was unreliable.
+- **Default poll interval lowered from 5 s to 1 s** — short events (a hand wave) used to slip between polls.
+- Per-camera initialisation pipeline split: standalone goes through `initCamera`, NVR rows go through the new `_initNvr`.
+
+### Fixed
+- **Auth retry on `rspCode = -6`** when the error is reported in `data.error.rspCode` rather than `data.code`. Previously caused permanent `Camera "front" init failed: please login first` after a token expired between login and the first command on some firmware revisions.
+- **`SetPushV20 ability error (-26)`** root cause documented: the camera account needs Admin role (`push.permit = 6` in `GetAbility`). The README and admin help text now call this out.
+- **`jsonConfig` validation warnings**: `_cameraHelp` empty `label` removed; `_discoverBtn.result` and `_generateVIs.result` switched to the object-form mapping.
+- **`_discoverBtn`** now returns a `message` field so the Admin UI toast shows the discovery result.
+
 ## [2.0.0] — 2026-05-27
 
 Initial public release of **ReoLox** — Reolink camera bridge for ioBroker with direct Loxone Miniserver integration.

@@ -34,6 +34,8 @@
   - [Virtual Input naming](#virtual-input-naming)
   - [Token Auth vs Basic](#token-auth-vs-basic)
   - [Loxone Intercom (RTSP on ring)](#loxone-intercom-rtsp-on-ring)
+- [NVR support](#nvr-support)
+- [Camera account permissions](#camera-account-permissions)
 - [Webhook server](#webhook-server)
 - [Snapshot capture](#snapshot-capture)
 - [PTZ control](#ptz-control)
@@ -75,6 +77,14 @@ It is built around a hardened webhook server that accepts Reolink push events on
 - UDP transport (token-less)
 - Configurable Virtual Input prefix (default `ReoLox`)
 - Loxone Intercom integration: the RTSP stream URL is delivered to a dedicated VI on doorbell ring so the Loxone Touch panel can display the camera feed
+
+**NVR support**
+
+- Reolink RLN8 / RLN16 / RLN36 — single row with `NVR ✓` flag, channels discovered via `GetChannelstatus`
+- Per-channel state tree: `reolox.0.<nvr>.chN.{info,status}.*`
+- Single batch `GetMdState` + `GetAiState` per cycle for every online channel (one HTTP round-trip)
+- Loxone VIs named `<prefix>_<nvr>_<channelName>_<event>` — e.g. `ReoLox_NVR_Front_AI_person`
+- `→ Loxone` per-row toggle: keep state tree in ioBroker but silence duplicate VIs when standalone + NVR rows cover the same cameras
 
 **Push webhook**
 
@@ -167,7 +177,8 @@ test/
 | ioBroker js-controller | ≥ 5.0                                               |
 | ioBroker admin         | ≥ 6.0                                               |
 | Node.js                | 18, 20, 22                                          |
-| Reolink firmware       | v3.x — CX810, Video Doorbell PoE, RLC-810A          |
+| Reolink firmware       | v3.x — CX810/CX820, Video Doorbell PoE, RLC-810A    |
+| Reolink NVR firmware   | v3.6+ — RLN8-410 verified (RLN16/RLN36 should work) |
 | Loxone Miniserver      | Gen 1 (Basic Auth) / Gen 2 (Token Auth, HMAC-SHA1)  |
 | Platforms              | Linux / macOS / Windows                             |
 
@@ -200,9 +211,11 @@ Add a row per camera. Fields:
 | **User / Password** | Account configured on the camera. **Admin** role required for WhiteLed and most setters |
 | **Ch** | Channel index — `0` for standalone cameras, `0–15` for NVR channels |
 | **TLS** | Use HTTPS (self-signed certs accepted) |
-| **Poll s** | Status polling interval. Default 5 s. Per-camera override of the *Default poll interval* below |
+| **Poll s** | Status polling interval. Default **1 s**. Per-camera override of the *Default poll interval* below |
 | **Gate** | Enable fast-poll WhiteLed knock-pattern gate trigger for this camera (see [Gate trigger](#gate-trigger)) |
 | **Doorbell** | Mark this camera as a doorbell. Forces `caps.visitor + caps.doorbell = true` even when firmware misreports `GetDoorbell`. Visitor events arrive via webhook push and pulse `<prefix>_<cam>_Visitor` for 1 s |
+| **NVR** | Mark this row as a Reolink NVR (RLN8/RLN16/RLN36). ReoLox pulls the channel list from the device at startup and creates per-channel sub-states under `reolox.0.<nvr>.chN.*`. See [NVR support](#nvr-support) |
+| **→ Loxone** | Default `✓`. Uncheck to keep the row in ioBroker but stop forwarding events to the Loxone bridge — useful when a duplicate row would publish the same VIs (e.g. an NVR row alongside standalone cameras) |
 
 Two helpers under the table:
 
@@ -367,6 +380,58 @@ The token is refreshed at 80 % of its lifetime by the adapter, in the background
 When `Enable Loxone Intercom integration` is on and a doorbell ring arrives (either via webhook push or `GetDoorbell` polling), the bridge sends the **public** RTSP URL of the main stream to `<prefix>_<camera>_intercom` (e.g. `rtsp://192.168.0.48:554/h264Preview_01_main`). On ring-end the VI is reset to `0`. The Loxone Touch panel can be configured to subscribe to that VI and display the feed.
 
 The URL does **not** carry credentials — your camera must allow anonymous RTSP (default) or you need to expose a credentialed re-stream separately. Storing user/password in the VI would be a security risk and is intentionally not supported.
+
+## NVR support
+
+ReoLox treats a Reolink NVR (RLN8/RLN16/RLN36) as a single row in the Cameras tab with the **NVR ✓** flag. On startup the adapter logs in once, reads `GetDevInfo` for the model and channel count, then `GetChannelstatus` to learn which channels actually have a camera attached. For every online channel it creates:
+
+```
+reolox.0.<nvr>.info.{model, firmware, channelCount, activeChannels, connection}
+reolox.0.<nvr>.chN.info.{name, uid, online, sleep}
+reolox.0.<nvr>.chN.status.{motionDetected, personDetected, vehicleDetected, animalDetected, faceDetected}
+```
+
+A single poller (`PollScheduler` task `nvr:<nvrId>`) runs every `Poll s` seconds and batches `GetMdState` + `GetAiState` for every online channel into **one** HTTP request — eight cameras attached to an NVR = one network round-trip per cycle.
+
+### Loxone naming convention for NVR channels
+
+When **→ Loxone ✓** is set on the NVR row, each channel pushes its own VIs using `<prefix>_<nvrName>_<channelName>_<event>`:
+
+```
+ReoLox_NVR_Front_Motion          digital
+ReoLox_NVR_Front_AI_person       digital
+ReoLox_NVR_Front_AI_vehicle      digital
+ReoLox_NVR_Front_AI_animal       digital
+ReoLox_NVR_Front_AI_face         digital
+ReoLox_NVR_Online                digital   (master NVR connection)
+```
+
+The VI list generator in the Loxone tab expands NVR rows into one entry per channel automatically, so the Generate button produces the full list of names ready to paste into Loxone Config.
+
+### Choosing between standalone and NVR rows
+
+A camera attached to an NVR can also be reachable on its own IP — you can keep both rows in the configuration. The trade-offs:
+
+- **Standalone only**: shortest path. ReoLox talks directly to each camera, the NVR row is unnecessary.
+- **NVR only**: one login session, one batch poll, less LAN chatter. Camera count limited to what the NVR enumerates.
+- **Both**: redundancy if either path fails — but you'll see two sets of VIs (`ReoLox_Front_*` and `ReoLox_NVR_Front_*`). Use the **→ Loxone** checkbox on the NVR row to keep its state tree in ioBroker but silence the duplicate bridge events.
+
+## Camera account permissions
+
+Many commands in the Reolink API (`SetPushV20`, `SetWhiteLed`, `SetIsp`, …) require the user to have the **Administrator** role in the camera. ReoLox checks `GetAbility` and surfaces the relevant permits:
+
+```
+push.permit = 4  → read-only  (User/Guest role)
+push.permit = 6  → read+write (Administrator)
+```
+
+If you see `SetPushV20 failed: ability error (rspCode -26)` in the logs, open the camera's web UI:
+
+**Setting → Device → User Management** → edit the ReoLox account → **User Level: Administrator** → Save.
+
+Repeat for every camera. After promotion the auto push-URL configuration works without manual setup.
+
+> The Reolink Video Doorbell PoE firmware `v3.0.0.4662` blocks `SetPushV20` regardless of role — for those cameras configure the push URL manually under **Surveillance → Push → Webhook URL**.
 
 ## Webhook server
 
