@@ -846,7 +846,7 @@ class ReoLoxAdapter extends utils.Adapter {
         }
     }
 
-        async _pollNvr(nvrId) {
+    async _pollNvr(nvrId) {
         const api = this.cameras.get(nvrId);
         const camConfig = this.camConfigs.get(nvrId);
         const channels = this.lastStates.get(`${nvrId}.activeChannels`) || [];
