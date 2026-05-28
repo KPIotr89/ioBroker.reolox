@@ -744,6 +744,11 @@ class ReoLoxAdapter extends utils.Adapter {
                 await this._state(nvrId, `ch${ch.channel}.status.vehicleDetected`, 'AI vehicle detected', 'boolean', 'sensor.motion', false, false);
                 await this._state(nvrId, `ch${ch.channel}.status.animalDetected`, 'AI animal detected', 'boolean', 'sensor.motion', false, false);
                 await this._state(nvrId, `ch${ch.channel}.status.faceDetected`, 'AI face detected', 'boolean', 'sensor.motion', false, false);
+                // Phase 2 — writable per-channel control
+                await this._state(nvrId, `ch${ch.channel}.control.recording`, 'Recording enabled', 'boolean', 'switch', true, true);
+                await this._state(nvrId, `ch${ch.channel}.control.motionDetectionEnabled`, 'Motion detection enabled', 'boolean', 'switch', true, true);
+                await this._state(nvrId, `ch${ch.channel}.control.aiDetectionEnabled`, 'AI detection enabled (master)', 'boolean', 'switch', true, true);
+                await this._state(nvrId, `ch${ch.channel}.control.notificationsEnabled`, 'Push notifications enabled', 'boolean', 'switch', true, true);
             }
 
             // Remember active channel list + name mapping for the poller
@@ -758,6 +763,11 @@ class ReoLoxAdapter extends utils.Adapter {
                 run: () => this._pollNvr(nvrId),
             });
 
+            // Phase 2 — sync initial control state from NVR into ioBroker
+            await this._syncInitialNvrControlState(nvrId).catch((e) =>
+                this.log.debug(`Initial NVR control sync failed for ${nvrId}: ${sanitize(e.message)}`),
+            );
+
             this.log.info(`NVR "${nvrId}" ready. Polling ${activeChannels.length} channel(s) every ${intervalMs / 1000}s.`);
         } catch (err) {
             this.log.error(`NVR "${nvrId}" init failed: ${sanitize(err.message)}`);
@@ -770,7 +780,73 @@ class ReoLoxAdapter extends utils.Adapter {
      * for every online channel. Emits per-channel state changes and forwards
      * events to Loxone as `<viPrefix>_<nvrName>_<channelName>_<event>`.
      */
-    async _pollNvr(nvrId) {
+    /**
+     * Phase 2: read MD/AI/recording/push per channel and mirror into NVR ioBroker states.
+     * Runs once after _initNvr → poller setup; failures per channel are swallowed.
+     */
+    async _syncInitialNvrControlState(nvrId) {
+        const api = this.cameras.get(nvrId);
+        const channels = this.lastStates.get(`${nvrId}.activeChannels`) || [];
+        if (!api || channels.length === 0) return;
+        for (const ch of channels) {
+            const chId = `${nvrId}.ch${ch.channel}`;
+            try {
+                const r = await api.getRec(ch.channel);
+                const en = !!(r && r.Rec && r.Rec.schedule && r.Rec.schedule.enable);
+                await this.setStateAsync(`${chId}.control.recording`, en, true);
+            } catch (_) { /* skip */ }
+            try {
+                const en = await api.getMdAlarmEnabled(ch.channel);
+                await this.setStateAsync(`${chId}.control.motionDetectionEnabled`, en, true);
+            } catch (_) { /* skip */ }
+            try {
+                const en = await api.getAiCfgEnabled(ch.channel);
+                await this.setStateAsync(`${chId}.control.aiDetectionEnabled`, en, true);
+            } catch (_) { /* skip */ }
+            try {
+                const p = await api.getPushTypes(ch.channel);
+                await this.setStateAsync(`${chId}.control.notificationsEnabled`, !!p.enabled, true);
+            } catch (_) { /* skip */ }
+        }
+    }
+
+    /**
+     * Phase 2: dispatch a writable change targeting an NVR channel path
+     * (reolox.0.<nvrId>.ch<N>.control.<state>). Returns true if handled.
+     */
+    async _handleNvrChannelStateChange(id, state, api, nvrId, channelNum, sub) {
+        try {
+            switch (sub) {
+                case 'recording':
+                    await api.setRecEnabled(channelNum, !!state.val);
+                    await this.setStateAsync(id, !!state.val, true);
+                    this.log.info(`NVR "${nvrId}" ch${channelNum}: recording = ${state.val ? 'ON' : 'OFF'}`);
+                    return true;
+                case 'motionDetectionEnabled':
+                    await api.setMdAlarmEnabled(channelNum, !!state.val);
+                    await this.setStateAsync(id, !!state.val, true);
+                    this.log.info(`NVR "${nvrId}" ch${channelNum}: MD = ${state.val ? 'ON' : 'OFF'}`);
+                    return true;
+                case 'aiDetectionEnabled':
+                    await api.setAiCfgEnabled(channelNum, !!state.val);
+                    await this.setStateAsync(id, !!state.val, true);
+                    this.log.info(`NVR "${nvrId}" ch${channelNum}: AI = ${state.val ? 'ON' : 'OFF'}`);
+                    return true;
+                case 'notificationsEnabled':
+                    await api.setPushEnabled(channelNum, !!state.val);
+                    await this.setStateAsync(id, !!state.val, true);
+                    this.log.info(`NVR "${nvrId}" ch${channelNum}: push = ${state.val ? 'ON' : 'OFF'}`);
+                    return true;
+                default:
+                    return false;
+            }
+        } catch (e) {
+            this.log.warn(`NVR "${nvrId}" ch${channelNum} ${sub} failed: ${sanitize(e.message)}`);
+            return true;
+        }
+    }
+
+        async _pollNvr(nvrId) {
         const api = this.cameras.get(nvrId);
         const camConfig = this.camConfigs.get(nvrId);
         const channels = this.lastStates.get(`${nvrId}.activeChannels`) || [];
@@ -974,6 +1050,15 @@ class ReoLoxAdapter extends utils.Adapter {
         }
         const camConfig = this.camConfigs.get(camId) || {};
         const ch = camConfig.channel || 0;
+
+        // Phase 2: NVR per-channel control path (channel segment = `chN`)
+        const nvrChMatch = /^ch(\d+)$/.exec(channel);
+        if (nvrChMatch && stateName.startsWith('control.')) {
+            const handled = await this._handleNvrChannelStateChange(
+                id, state, api, camId, Number(nvrChMatch[1]), stateName.replace(/^control\./, ''),
+            );
+            if (handled) return;
+        }
 
         try {
             switch (`${channel}.${stateName}`) {
