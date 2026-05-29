@@ -80,7 +80,7 @@ ReoLox_garaz_AI_animal     ReoLox_garaz_Online        ReoLox_garaz_Visitor   (1 
 ReoLox_garaz_gate_trigger  ReoLox_garaz_whiteLed      ReoLox_garaz_intercom  (RTSP URL)
 ```
 
-The exact names are also written to `reolox.0.<cam>.loxone.vi*` at startup — copy them from there, or use **Generate** in the Loxone tab (it expands NVR rows into per-channel entries).
+The exact names are also written to `reolox.0.<cam>.loxone.vi*` at startup — copy them from there, or use **Generate VI list** in the Loxone tab (it expands NVR rows into per-channel entries).
 
 **Control from Loxone (Virtual Outputs).** The webhook server also accepts control commands, so a Virtual Output writes any control state directly — no extra adapter:
 
@@ -94,7 +94,7 @@ GET http://<iobroker>:<port>/reolox/cmd/<state.path>/<value>?secret=…
 | analog (Loxone inserts `<v>`) | `…/cmd/taras.control.whiteLedBrightness/<v>` |
 | NVR channel | `…/cmd/nvr.ch3.control.recording/0` |
 
-The Miniserver IP (Loxone tab) and localhost are accepted **without** the shared secret; any other allowlisted IP must append `?secret=…`. Only writable `*.control.*` states are accepted; values are coerced to the state type. In **Loxone Config → Peripherals → Virtual Outputs** add an output with address `http://<iobroker>:<port>` and a command `/reolox/cmd/<state>/<value>` (method `GET`).
+The Miniserver IP (Loxone tab) and localhost are accepted **without** the shared secret; any other allowlisted IP must append `?secret=…`. Only writable `*.control.*` states are accepted; values are coerced to the state type. In **Loxone Config → Peripherals → Virtual Outputs** add an output with address `http://<iobroker>:<port>` and a command `/reolox/cmd/<state>/<value>` (method `GET`). The Loxone tab has **Generate VO list** (a table of every command) and **Generate VO import XML** (a ready-to-import `<VirtualOut>` template for your cameras) to do this for you.
 
 ## Compatibility
 

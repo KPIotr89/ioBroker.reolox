@@ -1379,6 +1379,86 @@ class ReoLoxAdapter extends utils.Adapter {
                 }
             }
             this.sendTo(msg.from, msg.command, { result: rows, native: { loxoneVIList: rows }, error: null }, msg.callback);
+        } else if (msg.command === 'getLoxoneVOList') {
+            // Build the Virtual Output command list (Loxone → camera) for /reolox/cmd.
+            // Paths use the sanitized state id; the Loxone VO carries the host:port address.
+            const cams = Array.isArray(this.config.cameras) ? this.config.cameras : [];
+            const rows = [];
+            const dig = (camName, label, statePath, withOff = true) => rows.push({
+                cmd: `${camName} ${label}`,
+                on: `/reolox/cmd/${statePath}/1`,
+                off: withOff ? `/reolox/cmd/${statePath}/0` : '',
+                type: 'digital',
+            });
+            const ana = (camName, label, statePath) => rows.push({
+                cmd: `${camName} ${label}`,
+                on: `/reolox/cmd/${statePath}/<v>`,
+                off: '',
+                type: 'analog 0-100',
+            });
+            for (const cam of cams) {
+                if (!cam || !cam.enabled) continue;
+                const id = this.sanitizeId(cam.name || `cam_${cam.host}`);
+                if (cam.isNvr) {
+                    const channels = this.lastStates.get(`${id}.activeChannels`) || [];
+                    for (const ch of channels) {
+                        dig(`${cam.name} ch${ch.channel}`, 'recording', `${id}.ch${ch.channel}.control.recording`);
+                        dig(`${cam.name} ch${ch.channel}`, 'motion det.', `${id}.ch${ch.channel}.control.motionDetectionEnabled`);
+                        dig(`${cam.name} ch${ch.channel}`, 'AI det.', `${id}.ch${ch.channel}.control.aiDetectionEnabled`);
+                        dig(`${cam.name} ch${ch.channel}`, 'push', `${id}.ch${ch.channel}.control.notificationsEnabled`);
+                    }
+                    continue;
+                }
+                dig(cam.name, 'WhiteLed on/off', `${id}.control.whiteLed`);
+                ana(cam.name, 'WhiteLed brightness', `${id}.control.whiteLedBrightness`);
+                dig(cam.name, 'Recording', `${id}.control.recording`);
+                dig(cam.name, 'Push (all)', `${id}.control.notificationsEnabled`);
+                dig(cam.name, 'Siren pulse', `${id}.control.siren`, false);
+                dig(cam.name, 'Siren on/off', `${id}.control.sirenManual`);
+                dig(cam.name, 'Snapshot', `${id}.control.snapshot`, false);
+                dig(cam.name, 'Status LED', `${id}.control.statusLed`);
+            }
+            this.sendTo(msg.from, msg.command, { result: rows, native: { loxoneVOList: rows }, error: null }, msg.callback);
+        } else if (msg.command === 'getLoxoneVOXml') {
+            // Generate a ready-to-import Loxone Virtual Output template (.xml) for /reolox/cmd.
+            const host = String(this.config.webhookHost || '').trim() || '<ioBroker-IP>';
+            const port = this.config.webhookPort || 7777;
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const cams = Array.isArray(this.config.cameras) ? this.config.cameras : [];
+            const out = [
+                '<?xml version="1.0" encoding="utf-8"?>',
+                `<VirtualOut Title="ReoLox Control" Comment="ReoLox /reolox/cmd endpoint" Address="http://${esc(host)}:${port}" CmdInit="" CloseAfterSend="true" HintText="Miniserver IP and localhost skip the shared secret; other IPs append ?secret=...">`,
+                '\t<Info templateType="1" minVersion="15010820"/>',
+            ];
+            const dig = (title, p, withOff = true) => {
+                let s = `\t<VirtualOutCmd Title="${esc(title)}" Comment="" CmdOn="/reolox/cmd/${p}/1" CmdOnMethod="0"`;
+                if (withOff) s += ` CmdOff="/reolox/cmd/${p}/0" CmdOffMethod="0"`;
+                out.push(`${s} Analog="false" SourceValLow="0" DestValLow="0" SourceValHigh="1" DestValHigh="1" Repeat="0" HintText=""/>`);
+            };
+            const ana = (title, p) => out.push(`\t<VirtualOutCmd Title="${esc(title)}" Comment="" CmdOn="/reolox/cmd/${p}/&lt;v&gt;" CmdOnMethod="0" Analog="true" SourceValLow="0" DestValLow="0" SourceValHigh="100" DestValHigh="100" Repeat="0" HintText=""/>`);
+            for (const cam of cams) {
+                if (!cam || !cam.enabled) continue;
+                const id = this.sanitizeId(cam.name || `cam_${cam.host}`);
+                if (cam.isNvr) {
+                    const channels = this.lastStates.get(`${id}.activeChannels`) || [];
+                    for (const ch of channels) {
+                        dig(`${cam.name} ch${ch.channel} recording`, `${id}.ch${ch.channel}.control.recording`);
+                        dig(`${cam.name} ch${ch.channel} AI det.`, `${id}.ch${ch.channel}.control.aiDetectionEnabled`);
+                    }
+                    continue;
+                }
+                dig(`${cam.name} WhiteLed on/off`, `${id}.control.whiteLed`);
+                ana(`${cam.name} WhiteLed brightness`, `${id}.control.whiteLedBrightness`);
+                dig(`${cam.name} Recording`, `${id}.control.recording`);
+                dig(`${cam.name} Push (all)`, `${id}.control.notificationsEnabled`);
+                dig(`${cam.name} Siren pulse`, `${id}.control.siren`, false);
+                dig(`${cam.name} Siren on/off`, `${id}.control.sirenManual`);
+                dig(`${cam.name} Snapshot`, `${id}.control.snapshot`, false);
+                dig(`${cam.name} Status LED`, `${id}.control.statusLed`);
+            }
+            out.push('</VirtualOut>');
+            const xml = out.join('\n');
+            this.sendTo(msg.from, msg.command, { result: xml, native: { loxoneVOXml: xml }, error: null }, msg.callback);
         }
     }
 

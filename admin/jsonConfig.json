@@ -257,20 +257,63 @@
                 },
                 "loxoneVIList": {
                     "type": "table",
-                    "label": "Loxone Virtual Inputs to create",
+                    "label": "Virtual Inputs to create (events → Loxone)",
                     "hidden": "!data.loxoneEnabled",
-                    "help": "Click the button above to refresh this table from your current cameras. Create each entry in Loxone Config (names are case-sensitive), then F6 to save in the Miniserver.",
+                    "help": "Click ‘Generate VI list’ to fill this from your cameras. Create each Virtual Input in Loxone Config (names are case-sensitive), then F6 to save. The name already starts with the camera, so no separate column is needed.",
                     "import": false,
                     "export": false,
                     "noDelete": true,
-                    "noAdd": true,
                     "uniqueColumns": ["vi"],
                     "items": [
-                        { "type": "text", "attr": "camera", "label": "Camera", "width": "130px", "readOnly": true },
-                        { "type": "text", "attr": "vi", "label": "Virtual Input name", "width": "320px", "readOnly": true },
-                        { "type": "text", "attr": "type", "label": "Type", "width": "90px", "readOnly": true },
-                        { "type": "text", "attr": "note", "label": "Note", "readOnly": true }
+                        { "type": "text", "attr": "vi", "label": "Virtual Input name", "width": "360px", "readOnly": true },
+                        { "type": "text", "attr": "type", "label": "Type", "width": "80px", "readOnly": true },
+                        { "type": "text", "attr": "note", "label": "Description", "readOnly": true }
                     ]
+                },
+                "_dividerVOs": { "type": "divider" },
+                "_generateVOs": {
+                    "type": "sendTo",
+                    "command": "getLoxoneVOList",
+                    "label": "📋 Generate VO list (control → cameras)",
+                    "showProcess": true,
+                    "useNative": true,
+                    "result": { "loxoneVOList": "result" },
+                    "hidden": "!data.loxoneEnabled",
+                    "style": { "marginTop": "8px", "marginBottom": "8px" }
+                },
+                "loxoneVOList": {
+                    "type": "table",
+                    "label": "Virtual Output commands (Loxone → cameras)",
+                    "hidden": "!data.loxoneEnabled",
+                    "help": "Create ONE Virtual Output in Loxone Config with address http://<ioBroker-IP>:<webhook port> (default 7777), then one command per row, HTTP method GET. The Miniserver IP and localhost do not need the shared secret; any other IP appends ?secret=…. A ready-to-import template is also produced as ReoLox_Loxone_VirtualOutput.xml.",
+                    "import": false,
+                    "export": false,
+                    "noDelete": true,
+                    "items": [
+                        { "type": "text", "attr": "cmd", "label": "Command", "width": "200px", "readOnly": true },
+                        { "type": "text", "attr": "on", "label": "CmdOn", "width": "300px", "readOnly": true },
+                        { "type": "text", "attr": "off", "label": "CmdOff", "width": "300px", "readOnly": true },
+                        { "type": "text", "attr": "type", "label": "Type", "width": "90px", "readOnly": true }
+                    ]
+                },
+                "_generateVOXml": {
+                    "type": "sendTo",
+                    "command": "getLoxoneVOXml",
+                    "label": "🗎 Generate VO import XML",
+                    "showProcess": true,
+                    "useNative": true,
+                    "result": { "loxoneVOXml": "result" },
+                    "hidden": "!data.loxoneEnabled",
+                    "style": { "marginTop": "8px" }
+                },
+                "loxoneVOXml": {
+                    "type": "text",
+                    "label": "VO template XML — copy, save as ReoLox.xml, import in Loxone Config",
+                    "hidden": "!data.loxoneEnabled",
+                    "readOnly": true,
+                    "minRows": 10,
+                    "maxRows": 24,
+                    "help": "Ready-to-import Virtual Output template for your current cameras. Select all → copy → save as a .xml file → Loxone Config: Peripherals → Virtual Outputs → import. Address uses the Webhook tab’s ioBroker IP and port."
                 },
                 "_loxoneInfo": {
                     "type": "staticText",

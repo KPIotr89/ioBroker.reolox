@@ -2,6 +2,18 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] — 2026-05-29
+
+### Added
+- **Loxone tab → Generate VO list** — a table of Virtual Output commands (`CmdOn` / `CmdOff` paths, digital/analog) for every control state, ready to recreate in a Loxone Virtual Output pointed at `/reolox/cmd`.
+- **Loxone tab → Generate VO import XML** — produces a ready-to-import Loxone Virtual Output template (`<VirtualOut>`) for the configured cameras and shows it in a copyable, read-only field. Address is taken from the Webhook tab (ioBroker IP + port).
+
+### Changed
+- **VI list table tidied** for readability: wider *Virtual Input name* column, and the redundant *Camera* column dropped (the name already starts with the camera).
+
+### Fixed
+- Removed an invalid **`noAdd`** property from the VI table — admin's jsonConfig schema rejected it (`must NOT have additional properties`), which made the whole config fail validation.
+
 ## [2.4.1] — 2026-05-29
 
 ### Changed
