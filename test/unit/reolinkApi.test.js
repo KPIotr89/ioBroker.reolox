@@ -151,6 +151,7 @@ describe('ReolinkAPI', () => {
         await api.setSirenManual(0, true);
         expect(body[0].param.alarm_mode).to.equal('manul');
         expect(body[0].param.manual_switch).to.equal(1);
+        expect(body[0].param).to.not.have.property('times'); // CX820: times makes it play once
         await api.setSirenManual(0, false);
         expect(body[0].param.manual_switch).to.equal(0);
     });

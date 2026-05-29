@@ -2,6 +2,11 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.3] — 2026-05-29
+
+### Fixed
+- **Sustained siren on/off** (`control.sirenManual`) on models such as **CX820** (firmware v3.2.x): the `AudioAlarmPlay` manual command no longer includes `times`, which those firmwares interpreted as "play once" (so only the timed pulse worked). It now matches the official on/off examples — `alarm_mode:"manul"` with `manual_switch` only. CX810 is unaffected (it already worked).
+
 ## [2.5.2] — 2026-05-29
 
 ### Fixed

@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.5.2",
+        "version": "2.5.3",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -75,6 +75,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.5.3": {
+                "en": "Siren on/off fix: the sustained manual command no longer sends `times`, which made some firmware (e.g. CX820 v3.2.x) play once instead of holding the siren — so only the pulse worked there. Now matches the official AudioAlarmPlay on/off examples. CX810 unaffected.",
+                "de": "Sirenen-Fix (Ein/Aus): der manuelle Dauerbefehl sendet kein `times` mehr — manche Firmware (z. B. CX820 v3.2.x) spielte dadurch nur einmal statt die Sirene zu halten. Entspricht jetzt den offiziellen AudioAlarmPlay-Beispielen. CX810 unveraendert.",
+                "pl": "Fix syreny on/off: trwała komenda manualna nie wysyla juz `times`, przez co czesc firmware (np. CX820 v3.2.x) odtwarzala raz zamiast podtrzymac wycie — dzialal tylko puls. Teraz zgodne z oficjalnymi przykladami AudioAlarmPlay. CX810 bez zmian."
+            },
             "2.5.2": {
                 "en": "Loxone tab: the step-by-step guides and naming-convention panel now render as readable multi-line lists (jsonConfig staticText shows plain text — markdown removed, line breaks forced).",
                 "de": "Loxone-Tab: Die Schritt-Anleitungen und das Namens-Panel werden jetzt als lesbare mehrzeilige Listen dargestellt (jsonConfig staticText zeigt Klartext — Markdown entfernt, Zeilenumbrueche erzwungen).",
