@@ -175,18 +175,28 @@ describe('WebhookServer', () => {
         await srv.stop();
     });
 
-    it('control: 401 on wrong secret (and onControl not called)', async () => {
-        let called = false;
+    it('control: trusted localhost bypasses the shared secret', async () => {
+        let captured;
         const { srv, port } = await startOnFreePort({
-            ipAllowlist: ['127.0.0.1'],
-            sharedSecret: 'sec',
+            ipAllowlist: ['10.0.0.1'],   // localhost not in the event allowlist
+            sharedSecret: 'sec',         // secret set, but loopback is strongly trusted
             onEvent: () => {},
-            onControl: () => { called = true; },
+            onControl: (statePath) => { captured = statePath; },
         });
-        const res = await get(port, '/reolox/cmd/taras.control.whiteLed/1?secret=nope');
-        expect(res.status).to.equal(401);
-        expect(called).to.equal(false);
+        const res = await get(port, '/reolox/cmd/taras.control.whiteLed/1'); // no secret
+        expect(res.status).to.equal(200);
+        await new Promise((r) => setTimeout(r, 30));
+        expect(captured).to.equal('taras.control.whiteLed');
         await srv.stop();
+    });
+
+    it('_isTrustedForControl: only loopback and extraAllowed skip the secret', () => {
+        const srv = new WebhookServer({ log: silentLog, port: 0, ipAllowlist: ['192.168.0.175'], extraAllowed: ['192.168.0.2'] });
+        expect(srv._isTrustedForControl('127.0.0.1')).to.equal(true);
+        expect(srv._isTrustedForControl('::1')).to.equal(true);
+        expect(srv._isTrustedForControl('192.168.0.2')).to.equal(true);     // Miniserver
+        expect(srv._isTrustedForControl('192.168.0.175')).to.equal(false);  // allowlisted, still needs secret
+        expect(srv._isTrustedForControl('8.8.8.8')).to.equal(false);
     });
 
     it('_ipAllowed combines auto (camera hosts) with explicit IPs', () => {

@@ -2,6 +2,11 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1] — 2026-05-29
+
+### Changed
+- **Control endpoint secret made trust-aware.** The Loxone Miniserver IP (trusted via the *Loxone* tab) and loopback no longer need the webhook shared secret on `/reolox/cmd/…`, so a Virtual Output works out of the box without `?secret=` on every command. Any **other** source IP still must present the secret, and the webhook **push** path is unchanged (secret still enforced there).
+
 ## [2.4.0] — 2026-05-29
 
 ### Added

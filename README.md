@@ -94,7 +94,7 @@ GET http://<iobroker>:<port>/reolox/cmd/<state.path>/<value>?secret=…
 | analog (Loxone inserts `<v>`) | `…/cmd/taras.control.whiteLedBrightness/<v>` |
 | NVR channel | `…/cmd/nvr.ch3.control.recording/0` |
 
-Accepted only from the Miniserver IP (Loxone tab) or the allowlist, guarded by the shared secret. Only writable `*.control.*` states are accepted; values are coerced to the state type. In **Loxone Config → Peripherals → Virtual Outputs** add an output with address `http://<iobroker>:<port>` and a command `/reolox/cmd/<state>/<value>?secret=…` (method `GET`).
+The Miniserver IP (Loxone tab) and localhost are accepted **without** the shared secret; any other allowlisted IP must append `?secret=…`. Only writable `*.control.*` states are accepted; values are coerced to the state type. In **Loxone Config → Peripherals → Virtual Outputs** add an output with address `http://<iobroker>:<port>` and a command `/reolox/cmd/<state>/<value>` (method `GET`).
 
 ## Compatibility
 
@@ -139,7 +139,7 @@ Either the firmware returns `GetDoorbell -9 not supported` (Doorbell PoE v3.0.0.
 <details>
 <summary><b>Webhook / control returns 403 or 401.</b></summary>
 
-**403** — source IP not allowed. The allowlist can mix `auto` (camera hosts) with explicit IPs (e.g. `auto, 192.168.0.175`); control additionally accepts the Miniserver IP and always loopback (`127.0.0.1`, handy for `curl` on the host). A request from your PC/browser is rejected unless you add its IP. **401** — missing/wrong shared secret (note: this is the *Webhook* shared secret, not the camera password).
+**403** — source IP not allowed. The allowlist can mix `auto` (camera hosts) with explicit IPs (e.g. `auto, 192.168.0.175`); control additionally accepts the Miniserver IP and always loopback (`127.0.0.1`, handy for `curl` on the host). A request from your PC/browser is rejected unless you add its IP. **401** — missing/wrong shared secret on a non-trusted source. The Miniserver IP and localhost skip the secret on `/reolox/cmd`; any other IP must include it (this is the *Webhook* shared secret, not the camera password).
 
 </details>
 
@@ -206,7 +206,7 @@ test/                   # mocha + chai + nock, @iobroker/testing
 
 **Webhook tab:** Enable server · Listen port (7777) · ioBroker IP (used to auto-configure each camera's push URL) · Shared secret (encrypted) · Source IP allowlist (`auto`, explicit IPs, or both — `auto, 192.168.0.175`) · **Allow Loxone control commands** (default on).
 
-**Request validation order:** method → path under `/reolox/` → source IP in allowlist → shared secret (constant-time) → body ≤ 64 KB (else `413`). The `/reolox/cmd/…` control route additionally accepts the Miniserver IP and `GET`.
+**Request validation order:** method → path under `/reolox/` → source IP in allowlist → shared secret (constant-time) → body ≤ 64 KB (else `413`). The `/reolox/cmd/…` control route also accepts the Miniserver IP and loopback, allows `GET`, and skips the shared secret for those two trusted sources (any other IP still needs it).
 
 </details>
 

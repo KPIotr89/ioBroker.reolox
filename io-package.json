@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.4.0",
+        "version": "2.4.1",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -75,6 +75,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.4.1": {
+                "en": "Control endpoint: the Loxone Miniserver IP and localhost no longer need the shared secret, so Virtual Outputs work without ?secret= on every command. Other source IPs still require the secret; the webhook push path is unchanged.",
+                "de": "Steuer-Endpunkt: Die Loxone-Miniserver-IP und localhost brauchen kein Shared Secret mehr — Virtuelle Ausgaenge funktionieren ohne ?secret= pro Befehl. Andere Quell-IPs brauchen weiterhin das Secret; der Webhook-Push-Pfad bleibt unveraendert.",
+                "pl": "Endpoint sterujacy: IP Miniservera Loxone i localhost nie wymagaja juz shared secret — Wirtualne Wyjscia dzialaja bez ?secret= przy kazdej komendzie. Inne zrodlowe IP dalej wymagaja sekretu; sciezka push webhooka bez zmian."
+            },
             "2.4.0": {
                 "en": "Siren control reworked: control.siren is a timed pulse that now honours control.audioAlarmDuration, plus new control.sirenManual for sustained on/off (Loxone can hold the siren while an alarm lasts). Fix: AudioAlarmPlay payload now matches the official API (flat param, alarm_mode times/manul, manual_switch, times in seconds) — the previous wrapped manualSwitch/duration form was wrong.",
                 "de": "Sirenensteuerung ueberarbeitet: control.siren ist ein zeitlicher Puls, der jetzt control.audioAlarmDuration beruecksichtigt, plus neues control.sirenManual fuer dauerhaftes Ein/Aus. Fix: AudioAlarmPlay-Payload entspricht jetzt der offiziellen API (flacher Param, alarm_mode times/manul, manual_switch, times in Sekunden).",
