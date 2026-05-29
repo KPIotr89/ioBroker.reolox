@@ -2,6 +2,11 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.5] — 2026-05-29
+
+### Fixed
+- **WhiteLed (spotlight) capability detection corrected.** It was based on `ledControl.permit`, which on a Reolink Video Doorbell PoE is the doorbell-ring light (`permit=6`) — so doorbells wrongly got `whiteLed` states/VIs/VOs, while a CX820 (`ledControl=0`) only worked via a loose `GetWhiteLed` probe. Detection now uses **`supportWLLightAlarm`** (CX-series spotlight) / **`floodLight`** (RLC floodlights), and the probe is skipped for `isDoorbell` rows. The **VI and VO generators are gated by the capability** too, so cameras without a spotlight no longer emit `whiteLed` / `gate_trigger` entries.
+
 ## [2.5.4] — 2026-05-29
 
 ### Added

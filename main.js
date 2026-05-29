@@ -279,13 +279,20 @@ class ReoLoxAdapter extends utils.Adapter {
             if (chn.aiTrack && chn.aiTrack.ver > 0) caps.aiDetection = true;
             if (ab.aiTrack && ab.aiTrack.ver > 0) caps.aiDetection = true;
 
-            if (chn.ledControl && chn.ledControl.permit > 0) caps.whiteLed = true;
+            // White spotlight: supportWLLightAlarm (CX-series) or floodLight (RLC floodlights).
+            // NOT ledControl — on doorbells that flag is the doorbell-ring light, not a spotlight
+            // (doorbell reports ledControl.permit=6 with NO white LED; CX820 reports ledControl=0 yet HAS one).
+            const wlAbility = chn.supportWLLightAlarm || {};
+            const flAbility = chn.floodLight || {};
+            if (wlAbility.permit > 0 || wlAbility.ver > 0) caps.whiteLed = true;
+            if (flAbility.permit > 0 || flAbility.ver > 0) caps.whiteLed = true;
             if (chn.alarmAudio && chn.alarmAudio.permit > 0 && chn.alarmAudio.ver > 0) caps.siren = true;
             if (chn.supportAiVisitor && (chn.supportAiVisitor.ver > 0 || chn.supportAiVisitor.permit > 0)) caps.visitor = true;
         }
 
-        // If GetAbility didn't confirm WhiteLed, probe — some firmwares omit it.
-        if (!caps.whiteLed) {
+        // Probe only for NON-doorbell cameras that didn't confirm via ability — doorbells
+        // answer GetWhiteLed even with no spotlight, so the probe would false-positive them.
+        if (!caps.whiteLed && !(camConfig && camConfig.isDoorbell)) {
             try { await api.getWhiteLed(); caps.whiteLed = true; } catch (_) { /* still false */ }
         }
 
@@ -1397,9 +1404,10 @@ class ReoLoxAdapter extends utils.Adapter {
                     }
                     continue;
                 }
+                const camHasWL = this._hasCapability(this.sanitizeId(cam.name || `cam_${cam.host}`), 'whiteLed');
                 push(cam, 'Motion', 'digital', 'Motion detected');
                 push(cam, 'Online', 'digital', 'Camera reachable (1/0)');
-                push(cam, 'whiteLed', 'digital', 'WhiteLed state');
+                if (camHasWL) push(cam, 'whiteLed', 'digital', 'WhiteLed state');
                 if (cam.isDoorbell) {
                     push(cam, 'Visitor', 'digital', '1 s pulse on doorbell ring');
                     push(cam, 'doorbellRing', 'digital', 'Doorbell button state');
@@ -1407,7 +1415,7 @@ class ReoLoxAdapter extends utils.Adapter {
                 push(cam, 'AI_person', 'digital', 'AI person detected');
                 push(cam, 'AI_vehicle', 'digital', 'AI vehicle detected');
                 push(cam, 'AI_animal', 'digital', 'AI animal detected');
-                if (cam.whiteLedGateTrigger) {
+                if (cam.whiteLedGateTrigger && camHasWL) {
                     push(cam, 'gate_trigger', 'digital', '1 s pulse on knock pattern');
                 }
                 if (this.config.loxoneIntercomEnabled) {
@@ -1445,8 +1453,10 @@ class ReoLoxAdapter extends utils.Adapter {
                     }
                     continue;
                 }
-                dig(cam.name, 'WhiteLed on/off', `${id}.control.whiteLed`);
-                ana(cam.name, 'WhiteLed brightness', `${id}.control.whiteLedBrightness`);
+                if (this._hasCapability(id, 'whiteLed')) {
+                    dig(cam.name, 'WhiteLed on/off', `${id}.control.whiteLed`);
+                    ana(cam.name, 'WhiteLed brightness', `${id}.control.whiteLedBrightness`);
+                }
                 dig(cam.name, 'Recording', `${id}.control.recording`);
                 dig(cam.name, 'Push (all)', `${id}.control.notificationsEnabled`);
                 dig(cam.name, 'Siren pulse', `${id}.control.siren`, false);
@@ -1484,8 +1494,10 @@ class ReoLoxAdapter extends utils.Adapter {
                     }
                     continue;
                 }
-                dig(`${cam.name} WhiteLed on/off`, `${id}.control.whiteLed`);
-                ana(`${cam.name} WhiteLed brightness`, `${id}.control.whiteLedBrightness`);
+                if (this._hasCapability(id, 'whiteLed')) {
+                    dig(`${cam.name} WhiteLed on/off`, `${id}.control.whiteLed`);
+                    ana(`${cam.name} WhiteLed brightness`, `${id}.control.whiteLedBrightness`);
+                }
                 dig(`${cam.name} Recording`, `${id}.control.recording`);
                 dig(`${cam.name} Push (all)`, `${id}.control.notificationsEnabled`);
                 dig(`${cam.name} Siren pulse`, `${id}.control.siren`, false);

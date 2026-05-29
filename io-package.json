@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.5.4",
+        "version": "2.5.5",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -75,6 +75,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.5.5": {
+                "en": "WhiteLed (spotlight) detection fixed: now based on supportWLLightAlarm/floodLight, not ledControl. Doorbells (which expose ledControl for the ring light but have no spotlight) no longer get whiteLed states, VIs or VO commands; the GetWhiteLed probe is skipped for doorbells. VI/VO generators are gated by capability.",
+                "de": "WhiteLed-(Strahler-)Erkennung korrigiert: jetzt ueber supportWLLightAlarm/floodLight statt ledControl. Tuerklingeln (deren ledControl die Ring-Beleuchtung ist, ohne Strahler) bekommen keine whiteLed-States/VIs/VOs mehr; die GetWhiteLed-Probe wird bei Tuerklingeln uebersprungen. VI/VO-Generatoren nach Capability gefiltert.",
+                "pl": "Poprawiona detekcja WhiteLed (reflektor): teraz po supportWLLightAlarm/floodLight, nie po ledControl. Dzwonki (ktore maja ledControl dla podswietlenia przycisku, ale bez reflektora) nie dostaja juz stanow/VI/VO whiteLed; probe GetWhiteLed pomijany dla dzwonkow. Generatory VI/VO bramkowane po capability."
+            },
             "2.5.4": {
                 "en": "Software-held siren: control.sirenManual now works on every model (incl. CX820 v3.2.x, which has no native held mode) by re-firing a 1-repeat pulse every 2.8 s; OFF stops it and it is fail-safe. New control.sirenOnDetect (SetAudioAlarmV20 enable) sounds the siren on AI/motion detection. Note: AudioAlarmPlay 'times' = sound repetitions (~2.5 s each), not seconds.",
                 "de": "Software-gehaltene Sirene: control.sirenManual funktioniert jetzt auf jedem Modell (inkl. CX820 v3.2.x ohne nativen Haltemodus), indem ein 1-fach-Puls alle 2,8 s neu ausgeloest wird; AUS stoppt die Schleife, fail-safe. Neu: control.sirenOnDetect (SetAudioAlarmV20 enable) loest die Sirene bei KI/Bewegung aus. Hinweis: AudioAlarmPlay 'times' = Tonwiederholungen (~2,5 s), keine Sekunden.",
