@@ -18,6 +18,7 @@ const GATE_TRIGGER_PULSE_MS = 1000;
 const VISITOR_PULSE_MS = 1000;
 const USER_WRITE_DEBOUNCE_MS = 3000;
 const HEARTBEAT_INTERVAL_MS = 60_000;  // Periodic Online refresh to Loxone
+const SIREN_HOLD_REFIRE_MS = 2800;     // Re-fire a 1-repeat siren pulse (~2.5s each) to emulate a held siren; >2.5s avoids overlap/queueing — a brief gap is harmless
 
 /**
  * ReoLox — Reolink ↔ Loxone integration adapter for ioBroker.
@@ -53,6 +54,9 @@ class ReoLoxAdapter extends utils.Adapter {
 
         /** Suppresses poll-driven `control.whiteLed` overrides right after a user write. */
         this.userWriteAt = new Map();
+
+        /** @type {Map<string, NodeJS.Timeout>} camId → siren-hold re-fire interval (software-held siren) */
+        this.sirenLoops = new Map();
 
         this.timers = new TimerManager();
         this.loxoneBridge = null;
@@ -379,7 +383,8 @@ class ReoLoxAdapter extends utils.Adapter {
         }
         if (this._hasCapability(camId, 'siren')) {
             await this._state(camId, 'control.siren', 'Trigger siren (timed pulse)', 'boolean', 'button', false, true);
-            await this._state(camId, 'control.sirenManual', 'Siren manual on/off (sustained)', 'boolean', 'switch', false, true);
+            await this._state(camId, 'control.sirenManual', 'Siren hold on/off (software-pulsed, all models)', 'boolean', 'switch', false, true);
+            await this._state(camId, 'control.sirenOnDetect', 'Armed siren — sound on AI/motion detection', 'boolean', 'switch', false, true);
             await this._state(camId, 'control.audioAlarmDuration', 'Audio alarm duration (s)', 'number', 'level', 5, true, { min: 1, max: 30, unit: 's' });
             await this._state(camId, 'control.audioAlarmSound', 'Audio alarm sound id', 'number', 'value', 1, true, { min: 0, max: 10 });
         }
@@ -524,7 +529,8 @@ class ReoLoxAdapter extends utils.Adapter {
         if (this._hasCapability(camId, 'siren')) {
             try {
                 const r = await api.getAudioAlarmState(ch);
-                const cfg = (r && r.AudioAlarmV20) || {};
+                const cfg = (r && (r.Audio || r.AudioAlarmV20)) || {};
+                await this.setStateAsync(`${camId}.control.sirenOnDetect`, !!cfg.enable, true);
                 if (cfg.duration !== undefined) await this.setStateAsync(`${camId}.control.audioAlarmDuration`, Number(cfg.duration), true);
                 if (cfg.sound_index !== undefined) await this.setStateAsync(`${camId}.control.audioAlarmSound`, Number(cfg.sound_index), true);
             } catch (_) { /* skip */ }
@@ -1016,6 +1022,28 @@ class ReoLoxAdapter extends utils.Adapter {
         return String(raw);
     }
 
+    /**
+     * Emulate a held siren using the only primitive every model honours: re-fire a
+     * 1-repeat pulse (~2.5 s each) on a short interval. Robust across firmware (incl.
+     * CX820, which has no native held mode) and fail-safe — if the adapter stops,
+     * the last pulse rings out within ~2.5 s instead of latching on.
+     */
+    _startSirenHold(camId, ch) {
+        if (this.sirenLoops.has(camId)) return;
+        const fire = () => {
+            const api = this.cameras.get(camId);
+            if (api) api.triggerSiren(ch, 1).catch((e) => this.log.debug(`Siren hold tick failed for ${camId}: ${sanitize(e.message)}`));
+        };
+        fire();
+        this.sirenLoops.set(camId, this.timers.setInterval(fire, SIREN_HOLD_REFIRE_MS));
+    }
+
+    _stopSirenHold(camId) {
+        const h = this.sirenLoops.get(camId);
+        if (h) this.timers.clearInterval(h);
+        this.sirenLoops.delete(camId);
+    }
+
     async _dispatchWebhook(camId, sourceIp, events) {
         // Resolve camera id: explicit path > source IP match.
         let resolvedId = this.camConfigs.has(camId) ? camId : null;
@@ -1178,8 +1206,16 @@ class ReoLoxAdapter extends utils.Adapter {
                     }
                     break;
                 case 'control.sirenManual':
-                    try { await api.setSirenManual(ch, !!state.val); await this.setStateAsync(id, !!state.val, true); this.log.info(`Camera "${camId}": siren manual ${state.val ? 'ON' : 'OFF'}`); }
-                    catch (e) { this.log.warn(`Camera "${camId}" siren manual failed: ${sanitize(e.message)}`); }
+                    // Software-held siren: re-fire a 1-repeat pulse while ON (works on every
+                    // model, incl. CX820 which has no native held mode). OFF stops the loop.
+                    if (state.val) this._startSirenHold(camId, ch);
+                    else this._stopSirenHold(camId);
+                    await this.setStateAsync(id, !!state.val, true);
+                    this.log.info(`Camera "${camId}": siren hold ${state.val ? 'ON' : 'OFF'}`);
+                    break;
+                case 'control.sirenOnDetect':
+                    try { await api.setAudioAlarmEnabled(ch, !!state.val); await this.setStateAsync(id, !!state.val, true); this.log.info(`Camera "${camId}": armed siren (on detect) ${state.val ? 'ON' : 'OFF'}`); }
+                    catch (e) { this.log.warn(`Camera "${camId}" sirenOnDetect failed: ${sanitize(e.message)}`); }
                     break;
                 case 'control.statusLed':
                     try { await api.setPowerLed(ch, !!state.val); await this.setStateAsync(id, !!state.val, true); }
@@ -1414,7 +1450,8 @@ class ReoLoxAdapter extends utils.Adapter {
                 dig(cam.name, 'Recording', `${id}.control.recording`);
                 dig(cam.name, 'Push (all)', `${id}.control.notificationsEnabled`);
                 dig(cam.name, 'Siren pulse', `${id}.control.siren`, false);
-                dig(cam.name, 'Siren on/off', `${id}.control.sirenManual`);
+                dig(cam.name, 'Siren hold on/off', `${id}.control.sirenManual`);
+                dig(cam.name, 'Armed siren (on detect)', `${id}.control.sirenOnDetect`);
                 dig(cam.name, 'Snapshot', `${id}.control.snapshot`, false);
                 dig(cam.name, 'Status LED', `${id}.control.statusLed`);
             }
@@ -1452,7 +1489,8 @@ class ReoLoxAdapter extends utils.Adapter {
                 dig(`${cam.name} Recording`, `${id}.control.recording`);
                 dig(`${cam.name} Push (all)`, `${id}.control.notificationsEnabled`);
                 dig(`${cam.name} Siren pulse`, `${id}.control.siren`, false);
-                dig(`${cam.name} Siren on/off`, `${id}.control.sirenManual`);
+                dig(`${cam.name} Siren hold on/off`, `${id}.control.sirenManual`);
+                dig(`${cam.name} Armed siren (on detect)`, `${id}.control.sirenOnDetect`);
                 dig(`${cam.name} Snapshot`, `${id}.control.snapshot`, false);
                 dig(`${cam.name} Status LED`, `${id}.control.statusLed`);
             }

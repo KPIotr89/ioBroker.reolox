@@ -4,8 +4,14 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 
 ## [2.5.4] — 2026-05-29
 
+### Added
+- **Armed siren** — new `control.sirenOnDetect` (`SetAudioAlarmV20` enable 0/1, schedule preserved): the camera sounds its siren on AI/motion detection. Works on CX820 (and CX810). Ideal for a Loxone "away → arm" automation.
+
 ### Changed
-- **`control.sirenManual`** now sends both `alarm_mode` spellings — `"manul"` (CX810) and `"manu"` (the v8 HTTP-API guide / newer firmware such as CX820 v3.2.x) — and ignores whichever the firmware rejects. This avoids per-model detection while letting sustained on/off work where the older spelling did nothing. (Still no `times` field — that made some firmware play once.)
+- **`control.sirenManual` is now a software-held siren** that works on every model. The native held `AudioAlarmPlay` mode (`manul`) is honoured only by some firmware (CX810 v3.1.x); CX820 v3.2.x accepts it but does not hold and cannot stop a pulse early. So ON re-fires a 1-repeat pulse (~2.5 s each) every 2.8 s, OFF stops the loop — and it is fail-safe: if the adapter stops, the last pulse rings out (~2.5 s) instead of latching the siren on.
+
+### Notes
+- Reolink's `AudioAlarmPlay` `times` is the number of sound **repetitions** (~2.5 s each), not seconds, despite some docs labelling it "seconds".
 
 ## [2.5.3] — 2026-05-29
 

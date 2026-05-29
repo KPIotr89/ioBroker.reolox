@@ -76,9 +76,9 @@
         "messagebox": true,
         "news": {
             "2.5.4": {
-                "en": "Siren on/off: the sustained command now sends both alarm_mode spellings — ‘manul’ (CX810) and ‘manu’ (v8 API guide / newer firmware such as CX820) — ignoring whichever the firmware rejects, so it works across models without per-model detection.",
-                "de": "Sirene Ein/Aus: der Dauerbefehl sendet jetzt beide alarm_mode-Schreibweisen — ‘manul’ (CX810) und ‘manu’ (v8-Guide / neuere Firmware wie CX820) — und ignoriert die vom Geraet abgelehnte. Funktioniert so modelluebergreifend.",
-                "pl": "Syrena on/off: trwala komenda wysyla teraz obie pisownie alarm_mode — ‘manul’ (CX810) i ‘manu’ (guide v8 / nowszy firmware jak CX820) — ignorujac te, ktora firmware odrzuci. Dziala na roznych modelach bez wykrywania per model."
+                "en": "Software-held siren: control.sirenManual now works on every model (incl. CX820 v3.2.x, which has no native held mode) by re-firing a 1-repeat pulse every 2.8 s; OFF stops it and it is fail-safe. New control.sirenOnDetect (SetAudioAlarmV20 enable) sounds the siren on AI/motion detection. Note: AudioAlarmPlay 'times' = sound repetitions (~2.5 s each), not seconds.",
+                "de": "Software-gehaltene Sirene: control.sirenManual funktioniert jetzt auf jedem Modell (inkl. CX820 v3.2.x ohne nativen Haltemodus), indem ein 1-fach-Puls alle 2,8 s neu ausgeloest wird; AUS stoppt die Schleife, fail-safe. Neu: control.sirenOnDetect (SetAudioAlarmV20 enable) loest die Sirene bei KI/Bewegung aus. Hinweis: AudioAlarmPlay 'times' = Tonwiederholungen (~2,5 s), keine Sekunden.",
+                "pl": "Programowo trzymana syrena: control.sirenManual dziala teraz na kazdym modelu (w tym CX820 v3.2.x bez natywnego trybu hold) przez ponawianie pulsu 1-powtorzeniowego co 2,8 s; OFF zatrzymuje petle, jest fail-safe. Nowe control.sirenOnDetect (SetAudioAlarmV20 enable) wlacza syrene na wykryciu AI/ruchu. Uwaga: AudioAlarmPlay 'times' to liczba powtorzen dzwieku (~2,5 s), nie sekundy."
             },
             "2.5.3": {
                 "en": "Siren on/off fix: the sustained manual command no longer sends `times`, which made some firmware (e.g. CX820 v3.2.x) play once instead of holding the siren — so only the pulse worked there. Now matches the official AudioAlarmPlay on/off examples. CX810 unaffected.",

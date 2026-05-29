@@ -141,21 +141,32 @@ describe('ReolinkAPI', () => {
         expect(body[0].param).to.not.have.property('AudioAlarmPlay'); // flat, not wrapped
     });
 
-    it('setSirenManual sends both spellings (manul + manu), manual_switch, no times', async () => {
-        let bodies = [];
+    it('setSirenManual sends alarm_mode "manul", manual_switch, no times', async () => {
+        let body;
         nock('http://1.2.3.4:80')
             .persist()
             .post(/\/api\.cgi\?cmd=AudioAlarmPlay/)
-            .reply((uri, reqBody) => { bodies.push(reqBody[0].param); return [200, [{ cmd: 'AudioAlarmPlay', code: 0, value: { rspCode: 200 } }]]; });
+            .reply((uri, reqBody) => { body = reqBody; return [200, [{ cmd: 'AudioAlarmPlay', code: 0, value: { rspCode: 200 } }]]; });
         const api = new ReolinkAPI({ host: '1.2.3.4', username: 'u', password: 'p', log: silentLog });
         await api.setSirenManual(0, true);
-        const modes = bodies.map((p) => p.alarm_mode);
-        expect(modes).to.include('manul');
-        expect(modes).to.include('manu');
-        expect(bodies.every((p) => p.manual_switch === 1)).to.equal(true);
-        expect(bodies.every((p) => !Object.prototype.hasOwnProperty.call(p, 'times'))).to.equal(true);
-        bodies = [];
+        expect(body[0].param.alarm_mode).to.equal('manul');
+        expect(body[0].param.manual_switch).to.equal(1);
+        expect(body[0].param).to.not.have.property('times');
         await api.setSirenManual(0, false);
-        expect(bodies.every((p) => p.manual_switch === 0)).to.equal(true);
+        expect(body[0].param.manual_switch).to.equal(0);
+    });
+
+    it('setAudioAlarmEnabled reads then writes Audio.enable, preserving schedule', async () => {
+        nock('http://1.2.3.4:80').persist().post(/\/cgi-bin\/api\.cgi.*cmd=Login/)
+            .reply(200, [{ code: 0, value: { Token: { name: 'T', leaseTime: 3600 } } }]);
+        nock('http://1.2.3.4:80').persist().post(/\/cgi-bin\/api\.cgi.*cmd=GetAudioAlarmV20/)
+            .reply(200, [{ cmd: 'GetAudioAlarmV20', code: 0, value: { Audio: { enable: 0, schedule: { channel: 0, table: { MD: '111' } } } } }]);
+        let setBody;
+        nock('http://1.2.3.4:80').persist().post(/\/cgi-bin\/api\.cgi.*cmd=SetAudioAlarmV20/)
+            .reply((uri, reqBody) => { setBody = reqBody; return [200, [{ cmd: 'SetAudioAlarmV20', code: 0, value: { rspCode: 200 } }]]; });
+        const api = new ReolinkAPI({ host: '1.2.3.4', username: 'u', password: 'p', log: silentLog });
+        await api.setAudioAlarmEnabled(0, true);
+        expect(setBody[0].param.Audio.enable).to.equal(1);
+        expect(setBody[0].param.Audio.schedule.table.MD).to.equal('111'); // schedule preserved
     });
 });

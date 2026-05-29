@@ -220,7 +220,7 @@ status/    motionDetected, personDetected, vehicleDetected, animalDetected, face
 control/   snapshot, reboot, irLights(Auto/On/Off), whiteLed, whiteLedBrightness(0-100),
            whiteLedMode, statusLed, recording, notificationsEnabled,
            notify{Motion,Person,Vehicle,Animal,Visitor}, osdText, osdShowDateTime,
-           motionSensitivity(0-100), siren(pulse), sirenManual(on/off), audioAlarmDuration, audioAlarmSound
+           motionSensitivity(0-100), siren(pulse), sirenManual(hold), sirenOnDetect(armed), audioAlarmDuration, audioAlarmSound
 ptz/       command, speed(1-64), goToPreset, patrol, stop          (only if PTZ supported)
 image/     brightness, contrast, saturation, sharpness (0-255)
 streams/   rtspMainPublic, rtspSubPublic (no credentials), snapshotProxy
