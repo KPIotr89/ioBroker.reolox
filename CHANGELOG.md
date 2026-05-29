@@ -2,6 +2,11 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.2] — 2026-05-29
+
+### Fixed
+- Loxone-tab help panels (VI / VO step-by-step guides and the naming convention) now render as readable multi-line lists. jsonConfig `staticText` shows plain text, not markdown — the markup was removed and line breaks are forced with `white-space: pre-line`.
+
 ## [2.5.1] — 2026-05-29
 
 ### Added

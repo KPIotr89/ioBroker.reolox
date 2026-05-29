@@ -272,7 +272,7 @@
                 },
                 "_viSteps": {
                     "type": "staticText",
-                    "text": "**How to create the Virtual Inputs (step by step)**\n\n1. Click **Generate VI list** above — the table fills with the exact input names for your cameras.\n2. Copy a name from the *Virtual Input name* column, or use the table's **Export** button to save the whole list to a file.\n3. In Loxone Config open **Peripherals → Virtual Inputs** and add a **Virtual Input** for each row.\n4. Set its **Name** to the copied value — case-sensitive, paste it exactly.\n5. Type: rows marked *digital* stay digital (0/1); a row marked *text* (intercom) → switch the input to **Text**.\n6. Press **F6** to save to the Miniserver.\n7. Use the inputs in your program. ReoLox pushes `1`/`0` (or the RTSP URL) to them in real time — nothing to configure on the Loxone side.\n\nThe same names also appear under `reolox.0.<cam>.loxone.vi*` after the instance starts.",
+                    "text": "How to create the Virtual Inputs (step by step):\n\n1.  Click ‘Generate VI list’ above — the table fills with the exact input names for your cameras.\n2.  Copy a name from the ‘Virtual Input name’ column, or use the table’s Export button to save the whole list to a file.\n3.  In Loxone Config open Peripherals → Virtual Inputs and add a Virtual Input for each row.\n4.  Set its Name to the copied value (case-sensitive — paste it exactly).\n5.  Type: rows marked ‘digital’ stay digital (0/1); a row marked ‘text’ (intercom) → switch the input to Text.\n6.  Press F6 to save to the Miniserver.\n7.  Use the inputs in your program — ReoLox pushes 1/0 (or the RTSP URL) to them in real time, nothing to configure on the Loxone side.\n\nThe same names also appear under reolox.0.<cam>.loxone.vi* after the instance starts.",
                     "hidden": "!data.loxoneEnabled",
                     "style": {
                         "marginTop": "12px",
@@ -281,7 +281,8 @@
                         "borderLeft": "3px solid #34c759",
                         "borderRadius": "4px",
                         "fontSize": "13px",
-                        "lineHeight": "1.6"
+                        "lineHeight": "1.7",
+                        "whiteSpace": "pre-line"
                     }
                 },
                 "_dividerVOs": { "type": "divider" },
@@ -331,7 +332,7 @@
                 },
                 "_voSteps": {
                     "type": "staticText",
-                    "text": "**How to create the Virtual Output (step by step)**\n\n1. Click **Generate VO list** for the command table, or **Generate VO import XML** for a ready-to-import file.\n2. *Fastest (import):* copy the XML field above, save it as a `.xml`, then in Loxone Config: **Peripherals → Virtual Outputs → import**. Done — skip the rest.\n3. *Manual:* in Loxone Config add a **Virtual Output** and set **Address** to `http://<ioBroker-IP>:<webhook port>` (default 7777).\n4. For each row add a **Virtual Output Command**: paste *CmdOn* into the command-on field and *CmdOff* (if present) into command-off; HTTP method **GET**.\n5. Analog rows (e.g. brightness) contain `<v>` — Loxone inserts the value; mark the command as analog.\n6. Press **F6** to save, then wire the commands to buttons / logic in your program.\n7. From the Miniserver IP and localhost no shared secret is needed; from any other host append `?secret=…` to each command.\n\nThe **Export** button on the table saves the command list to a file.",
+                    "text": "How to create the Virtual Output (step by step):\n\n1.  Click ‘Generate VO list’ for the command table, or ‘Generate VO import XML’ for a ready-to-import file.\n2.  Fastest (import): copy the XML field above, save it as a .xml, then in Loxone Config → Peripherals → Virtual Outputs → import. Done — skip the rest.\n3.  Manual: in Loxone Config add a Virtual Output and set Address to http://<ioBroker-IP>:<webhook port> (default 7777).\n4.  For each row add a Virtual Output Command: paste CmdOn into the command-on field and CmdOff (if present) into command-off; HTTP method GET.\n5.  Analog rows (e.g. brightness) contain <v> — Loxone inserts the value; mark the command as analog.\n6.  Press F6 to save, then wire the commands to buttons / logic in your program.\n7.  From the Miniserver IP and localhost no shared secret is needed; from any other host append ?secret=… to each command.\n\nThe Export button on the table saves the command list to a file.",
                     "hidden": "!data.loxoneEnabled",
                     "style": {
                         "marginTop": "12px",
@@ -340,12 +341,13 @@
                         "borderLeft": "3px solid #0071e3",
                         "borderRadius": "4px",
                         "fontSize": "13px",
-                        "lineHeight": "1.6"
+                        "lineHeight": "1.7",
+                        "whiteSpace": "pre-line"
                     }
                 },
                 "_loxoneInfo": {
                     "type": "staticText",
-                    "text": "**Virtual Input naming convention**\n\nCreate these inputs in Loxone Config (names are case-sensitive). Prefix is configurable above; the default is `ReoLox`.\n\n`ReoLox_{Name}_Motion` — motion detected\n`ReoLox_{Name}_AI_person` — person (AI)\n`ReoLox_{Name}_AI_vehicle` — vehicle (AI)\n`ReoLox_{Name}_AI_animal` — animal (AI)\n`ReoLox_{Name}_Online` — camera online (1/0)\n`ReoLox_{Name}_Visitor` — doorbell pressed (1/0)\n`ReoLox_{Name}_gate_trigger` — gate trigger pulse (1)\n`ReoLox_{Name}_intercom` — RTSP URL string on ring (Loxone Intercom)\n\nThe exact VI names for each camera are visible in `<camId>.loxone.*` states after the instance starts.",
+                    "text": "Virtual Input naming convention\n\nCreate these inputs in Loxone Config (names are case-sensitive). The prefix is configurable above; default ReoLox.\n\nReoLox_{Name}_Motion — motion detected\nReoLox_{Name}_AI_person — person (AI)\nReoLox_{Name}_AI_vehicle — vehicle (AI)\nReoLox_{Name}_AI_animal — animal (AI)\nReoLox_{Name}_Online — camera online (1/0)\nReoLox_{Name}_Visitor — doorbell pressed (1/0)\nReoLox_{Name}_gate_trigger — gate trigger pulse (1)\nReoLox_{Name}_intercom — RTSP URL string on ring (Loxone Intercom)\n\nThe exact VI names per camera are visible in reolox.0.<camId>.loxone.* states after the instance starts.",
                     "hidden": "!data.loxoneEnabled",
                     "style": {
                         "marginTop": "16px",
@@ -353,7 +355,8 @@
                         "backgroundColor": "#f5f5f7",
                         "borderRadius": "8px",
                         "fontSize": "13px",
-                        "lineHeight": "1.6"
+                        "lineHeight": "1.7",
+                        "whiteSpace": "pre-line"
                     }
                 }
             }
