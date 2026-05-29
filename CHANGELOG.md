@@ -2,6 +2,17 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] — 2026-05-29
+
+### Added
+- **`control.sirenManual`** — sustained siren on/off (`AudioAlarmPlay` with `alarm_mode:"manul"`, `manual_switch` 1/0). Loxone can hold the siren on while an alarm condition lasts and clear it afterwards, in addition to the existing timed `control.siren` pulse.
+
+### Changed
+- **`control.siren`** (timed pulse) now uses the configured `control.audioAlarmDuration` instead of a hardcoded 5 s.
+
+### Fixed
+- **`AudioAlarmPlay` payload corrected** to the official API shape: a **flat** `param` with `alarm_mode` (`"times"` / `"manul"`), `manual_switch` and `times` (seconds). The previous `{ AudioAlarmPlay: { manualSwitch, duration } }` wrapper did not match the documented API and could be rejected by firmware.
+
 ## [2.3.1] — 2026-05-29
 
 ### Changed

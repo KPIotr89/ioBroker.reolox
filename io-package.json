@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.3.1",
+        "version": "2.4.0",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -75,6 +75,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.4.0": {
+                "en": "Siren control reworked: control.siren is a timed pulse that now honours control.audioAlarmDuration, plus new control.sirenManual for sustained on/off (Loxone can hold the siren while an alarm lasts). Fix: AudioAlarmPlay payload now matches the official API (flat param, alarm_mode times/manul, manual_switch, times in seconds) — the previous wrapped manualSwitch/duration form was wrong.",
+                "de": "Sirenensteuerung ueberarbeitet: control.siren ist ein zeitlicher Puls, der jetzt control.audioAlarmDuration beruecksichtigt, plus neues control.sirenManual fuer dauerhaftes Ein/Aus. Fix: AudioAlarmPlay-Payload entspricht jetzt der offiziellen API (flacher Param, alarm_mode times/manul, manual_switch, times in Sekunden).",
+                "pl": "Przebudowane sterowanie syrena: control.siren to puls czasowy uwzgledniajacy teraz control.audioAlarmDuration, plus nowe control.sirenManual do trwalego on/off (Loxone moze trzymac wycie przez czas alarmu). Fix: payload AudioAlarmPlay zgodny z oficjalnym API (plaski param, alarm_mode times/manul, manual_switch, times w sekundach) — poprzedni zawiniety manualSwitch/duration byl bledny."
+            },
             "2.3.1": {
                 "en": "IP allowlist now combines `auto` with explicit IPs (e.g. `auto, 192.168.0.175`) instead of one-or-the-other. The control endpoint /reolox/cmd always accepts localhost (127.0.0.1) for local testing (curl, scripts).",
                 "de": "IP-Allowlist kombiniert jetzt `auto` mit expliziten IPs (z. B. `auto, 192.168.0.175`) statt entweder/oder. Der Steuer-Endpunkt /reolox/cmd akzeptiert immer localhost (127.0.0.1) fuer lokale Tests (curl, Skripte).",

@@ -378,7 +378,8 @@ class ReoLoxAdapter extends utils.Adapter {
             await this._state(camId, 'status.whiteLedTrigger', 'Gate trigger (≤3s WhiteLed flash detected)', 'boolean', 'sensor', false, false);
         }
         if (this._hasCapability(camId, 'siren')) {
-            await this._state(camId, 'control.siren', 'Trigger siren/alarm', 'boolean', 'button', false, true);
+            await this._state(camId, 'control.siren', 'Trigger siren (timed pulse)', 'boolean', 'button', false, true);
+            await this._state(camId, 'control.sirenManual', 'Siren manual on/off (sustained)', 'boolean', 'switch', false, true);
             await this._state(camId, 'control.audioAlarmDuration', 'Audio alarm duration (s)', 'number', 'level', 5, true, { min: 1, max: 30, unit: 's' });
             await this._state(camId, 'control.audioAlarmSound', 'Audio alarm sound id', 'number', 'value', 1, true, { min: 0, max: 10 });
         }
@@ -1167,10 +1168,18 @@ class ReoLoxAdapter extends utils.Adapter {
                 }
                 case 'control.siren':
                     if (state.val) {
-                        try { await api.triggerSiren(ch, 5); this.log.info(`Siren on "${camId}"`); }
-                        catch (e) { this.log.debug(`Siren failed: ${sanitize(e.message)}`); }
+                        try {
+                            const ds = await this.getStateAsync(`${camId}.control.audioAlarmDuration`);
+                            const dur = (ds && Number(ds.val)) || 5;
+                            await api.triggerSiren(ch, dur);
+                            this.log.info(`Siren pulse ${dur}s on "${camId}"`);
+                        } catch (e) { this.log.debug(`Siren failed: ${sanitize(e.message)}`); }
                         await this.setStateAsync(id, false, true);
                     }
+                    break;
+                case 'control.sirenManual':
+                    try { await api.setSirenManual(ch, !!state.val); await this.setStateAsync(id, !!state.val, true); this.log.info(`Camera "${camId}": siren manual ${state.val ? 'ON' : 'OFF'}`); }
+                    catch (e) { this.log.warn(`Camera "${camId}" siren manual failed: ${sanitize(e.message)}`); }
                     break;
                 case 'control.statusLed':
                     try { await api.setPowerLed(ch, !!state.val); await this.setStateAsync(id, !!state.val, true); }
