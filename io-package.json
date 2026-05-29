@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.5.5",
+        "version": "2.5.6",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -75,6 +75,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.5.6": {
+                "en": "Doorbell: merged the redundant visitor/doorbell signals into one. On Doorbell PoE the button press arrives as a 'visitor' webhook, so status.doorbellRing and the <cam>_doorbellRing VI were duplicates of visitorDetected / <cam>_Visitor — now removed. Use <cam>_Visitor (and status.visitorDetected). The 20 s before a new ring registers is the camera's push debounce, not the adapter.",
+                "de": "Tuerklingel: redundante visitor/doorbell-Signale zu einem zusammengefuehrt. Bei Doorbell PoE kommt der Tastendruck als 'visitor'-Webhook, daher waren status.doorbellRing und <cam>_doorbellRing Duplikate von visitorDetected / <cam>_Visitor — jetzt entfernt. Nutze <cam>_Visitor. Die 20 s bis zum naechsten Klingeln sind die Push-Sperre der Kamera, nicht des Adapters.",
+                "pl": "Dzwonek: scalone redundantne sygnaly visitor/doorbell w jeden. Na Doorbell PoE przycisk przychodzi jako webhook 'visitor', wiec status.doorbellRing i VI <cam>_doorbellRing byly duplikatami visitorDetected / <cam>_Visitor — usuniete. Uzywaj <cam>_Visitor. 20 s do ponownego dzwonka to debounce push kamery, nie adapter."
+            },
             "2.5.5": {
                 "en": "WhiteLed (spotlight) detection fixed: now based on supportWLLightAlarm/floodLight, not ledControl. Doorbells (which expose ledControl for the ring light but have no spotlight) no longer get whiteLed states, VIs or VO commands; the GetWhiteLed probe is skipped for doorbells. VI/VO generators are gated by capability.",
                 "de": "WhiteLed-(Strahler-)Erkennung korrigiert: jetzt ueber supportWLLightAlarm/floodLight statt ledControl. Tuerklingeln (deren ledControl die Ring-Beleuchtung ist, ohne Strahler) bekommen keine whiteLed-States/VIs/VOs mehr; die GetWhiteLed-Probe wird bei Tuerklingeln uebersprungen. VI/VO-Generatoren nach Capability gefiltert.",

@@ -2,6 +2,14 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.6] — 2026-05-29
+
+### Changed
+- **Merged the redundant visitor / doorbell signals into one.** On the Reolink Video Doorbell PoE the button press arrives as a `visitor` webhook (no `GetDoorbell`), so `status.doorbellRing` and the `<cam>_doorbellRing` VI were always identical to `status.visitorDetected` / `<cam>_Visitor`. The `doorbellRing` state and VI are removed; use `Visitor` for the ring. (Existing `status.doorbellRing` objects on upgraded instances remain as harmless orphans — delete them manually if you like.)
+
+### Notes
+- The ~20 s before a fresh doorbell press registers again is the camera's own push debounce (Reolink rate-limits button pushes), not the adapter — the adapter's visitor pulse is 1 s.
+
 ## [2.5.5] — 2026-05-29
 
 ### Fixed

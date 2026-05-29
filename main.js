@@ -366,8 +366,7 @@ class ReoLoxAdapter extends utils.Adapter {
         await this._state(camId, 'status.animalDetected', 'Animal detected (AI)', 'boolean', 'sensor.motion', false, false);
         await this._state(camId, 'status.faceDetected', 'Face detected (AI)', 'boolean', 'sensor.motion', false, false);
         await this._state(camId, 'status.lastMotionTime', 'Last motion timestamp', 'number', 'date', 0, false);
-        await this._state(camId, 'status.visitorDetected', 'Visitor detected', 'boolean', 'sensor.motion', false, false);
-        await this._state(camId, 'status.doorbellRing', 'Doorbell button pressed', 'boolean', 'sensor', false, false);
+        await this._state(camId, 'status.visitorDetected', 'Visitor / doorbell ring', 'boolean', 'sensor.motion', false, false);
 
         await this._channel(camId, 'streams', 'Video Streams');
         // Credential-free public stream URLs (safe to read from scripts / logs).
@@ -616,11 +615,9 @@ class ReoLoxAdapter extends utils.Adapter {
                     const dbRes = await api.getDoorbell(ch);
                     const ringing = !!(dbRes && (dbRes.ring_state === 1 || (dbRes.Doorbell && dbRes.Doorbell.ring_state === 1)));
                     await this._emitChange(camId, 'doorbell', ringing, async () => {
-                        await this.setStateAsync(`${camId}.status.doorbellRing`, ringing, true);
                         await this.setStateAsync(`${camId}.status.visitorDetected`, ringing, true);
                         if (bridgeOK) {
                             await this.loxoneBridge.sendCustom(camConfig.name || camId, 'Visitor', ringing ? 1 : 0);
-                            await this.loxoneBridge.sendCustom(camConfig.name || camId, 'doorbellRing', ringing ? 1 : 0);
                         }
                     });
                 } catch (e) {
@@ -1101,10 +1098,8 @@ class ReoLoxAdapter extends utils.Adapter {
             case 'doorbell':
             case 'ring':
                 await this.setStateAsync(`${camId}.status.visitorDetected`, active, true);
-                await this.setStateAsync(`${camId}.status.doorbellRing`, active, true);
                 if (this.loxoneBridge) {
                     await this.loxoneBridge.sendCustom(camConfig.name || camId, 'Visitor', active ? 1 : 0);
-                    await this.loxoneBridge.sendCustom(camConfig.name || camId, 'doorbellRing', active ? 1 : 0);
                     if (this.config.loxoneIntercomEnabled) {
                         let streamUrl = '';
                         if (active) {
@@ -1409,8 +1404,7 @@ class ReoLoxAdapter extends utils.Adapter {
                 push(cam, 'Online', 'digital', 'Camera reachable (1/0)');
                 if (camHasWL) push(cam, 'whiteLed', 'digital', 'WhiteLed state');
                 if (cam.isDoorbell) {
-                    push(cam, 'Visitor', 'digital', '1 s pulse on doorbell ring');
-                    push(cam, 'doorbellRing', 'digital', 'Doorbell button state');
+                    push(cam, 'Visitor', 'digital', '1 s pulse on doorbell ring / visitor');
                 }
                 push(cam, 'AI_person', 'digital', 'AI person detected');
                 push(cam, 'AI_vehicle', 'digital', 'AI vehicle detected');

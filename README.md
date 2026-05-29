@@ -216,7 +216,7 @@ test/                   # mocha + chai + nock, @iobroker/testing
 ```
 info/      connection, model, name, firmware, serial, hardwareVersion, channelCount
 status/    motionDetected, personDetected, vehicleDetected, animalDetected, faceDetected,
-           lastMotionTime, visitorDetected, doorbellRing, whiteLed, whiteLedTrigger
+           lastMotionTime, visitorDetected, whiteLed, whiteLedTrigger
 control/   snapshot, reboot, irLights(Auto/On/Off), whiteLed, whiteLedBrightness(0-100),
            whiteLedMode, statusLed, recording, notificationsEnabled,
            notify{Motion,Person,Vehicle,Animal,Visitor}, osdText, osdShowDateTime,
@@ -248,7 +248,7 @@ Loxone VIs are `<prefix>_<nvrName>_<channelName>_<event>` (e.g. `ReoLox_NVR_Fron
 
 Each camera's `SetPushV20` is configured to POST to `http://<ioBroker-IP>:<port>/reolox/<cameraName>?secret=…`, set automatically at startup. Firmware without `SetPushV20` (Doorbell PoE v3.0.0.4662) falls back to polling; configure the URL manually under *Alarm → Push* if needed.
 
-Recognised types: `visitor`/`doorbell`/`ring` (→ visitorDetected + doorbellRing, 1 s pulse, Intercom RTSP if enabled), `md`/`motion`, `people`/`person`, `vehicle`, `dog_cat`/`animal`. An empty POST body (some doorbells) is treated as a visitor pulse, resolved by source IP.
+Recognised types: `visitor`/`doorbell`/`ring` (→ visitorDetected, 1 s pulse, Intercom RTSP if enabled), `md`/`motion`, `people`/`person`, `vehicle`, `dog_cat`/`animal`. An empty POST body (some doorbells) is treated as a visitor pulse, resolved by source IP.
 
 </details>
 
