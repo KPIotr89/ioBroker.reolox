@@ -2,6 +2,11 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.4] — 2026-05-29
+
+### Changed
+- **`control.sirenManual`** now sends both `alarm_mode` spellings — `"manul"` (CX810) and `"manu"` (the v8 HTTP-API guide / newer firmware such as CX820 v3.2.x) — and ignores whichever the firmware rejects. This avoids per-model detection while letting sustained on/off work where the older spelling did nothing. (Still no `times` field — that made some firmware play once.)
+
 ## [2.5.3] — 2026-05-29
 
 ### Fixed

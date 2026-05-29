@@ -141,18 +141,21 @@ describe('ReolinkAPI', () => {
         expect(body[0].param).to.not.have.property('AudioAlarmPlay'); // flat, not wrapped
     });
 
-    it('setSirenManual toggles manual_switch with alarm_mode "manul"', async () => {
-        let body;
+    it('setSirenManual sends both spellings (manul + manu), manual_switch, no times', async () => {
+        let bodies = [];
         nock('http://1.2.3.4:80')
             .persist()
             .post(/\/api\.cgi\?cmd=AudioAlarmPlay/)
-            .reply((uri, reqBody) => { body = reqBody; return [200, [{ cmd: 'AudioAlarmPlay', code: 0, value: { rspCode: 200 } }]]; });
+            .reply((uri, reqBody) => { bodies.push(reqBody[0].param); return [200, [{ cmd: 'AudioAlarmPlay', code: 0, value: { rspCode: 200 } }]]; });
         const api = new ReolinkAPI({ host: '1.2.3.4', username: 'u', password: 'p', log: silentLog });
         await api.setSirenManual(0, true);
-        expect(body[0].param.alarm_mode).to.equal('manul');
-        expect(body[0].param.manual_switch).to.equal(1);
-        expect(body[0].param).to.not.have.property('times'); // CX820: times makes it play once
+        const modes = bodies.map((p) => p.alarm_mode);
+        expect(modes).to.include('manul');
+        expect(modes).to.include('manu');
+        expect(bodies.every((p) => p.manual_switch === 1)).to.equal(true);
+        expect(bodies.every((p) => !Object.prototype.hasOwnProperty.call(p, 'times'))).to.equal(true);
+        bodies = [];
         await api.setSirenManual(0, false);
-        expect(body[0].param.manual_switch).to.equal(0);
+        expect(bodies.every((p) => p.manual_switch === 0)).to.equal(true);
     });
 });
