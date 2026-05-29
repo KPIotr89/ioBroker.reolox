@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.3.0",
+        "version": "2.3.1",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -75,6 +75,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.3.1": {
+                "en": "IP allowlist now combines `auto` with explicit IPs (e.g. `auto, 192.168.0.175`) instead of one-or-the-other. The control endpoint /reolox/cmd always accepts localhost (127.0.0.1) for local testing (curl, scripts).",
+                "de": "IP-Allowlist kombiniert jetzt `auto` mit expliziten IPs (z. B. `auto, 192.168.0.175`) statt entweder/oder. Der Steuer-Endpunkt /reolox/cmd akzeptiert immer localhost (127.0.0.1) fuer lokale Tests (curl, Skripte).",
+                "pl": "Lista dozwolonych IP laczy teraz `auto` z jawnymi IP (np. `auto, 192.168.0.175`) zamiast albo-albo. Endpoint sterujacy /reolox/cmd zawsze przyjmuje localhost (127.0.0.1) do testow lokalnych (curl, skrypty)."
+            },
             "2.3.0": {
                 "en": "Built-in HTTP control endpoint: Loxone Virtual Outputs can now drive any control state directly (GET <prefix>/cmd/<state.path>/<value>) — no extra adapter (simple-api) needed. Secured by the webhook shared secret and the Miniserver IP. New option controlApiEnabled (default on).",
                 "de": "Eingebauter HTTP-Steuer-Endpunkt: Loxone Virtuelle Ausgaenge steuern jeden control-State direkt (GET <prefix>/cmd/<state.path>/<value>) — ohne Zusatzadapter (simple-api). Abgesichert ueber Webhook-Shared-Secret und Miniserver-IP. Neue Option controlApiEnabled (Standard an).",

@@ -325,7 +325,7 @@
                     "label": "Source IP allowlist",
                     "default": "auto",
                     "hidden": "!data.webhookEnabled",
-                    "help": "`auto` = accept only the IPs of cameras configured in the Cameras tab. Otherwise comma-separated IPs (e.g. `192.168.0.48, 192.168.0.49`)."
+                    "help": "`auto` accepts the configured camera IPs. Combine it with explicit IPs if needed, e.g. `auto, 192.168.0.175`. Control commands (/reolox/cmd) also always accept localhost (127.0.0.1)."
                 },
                 "controlApiEnabled": {
                     "type": "checkbox",

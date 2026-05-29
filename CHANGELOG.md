@@ -2,6 +2,14 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] — 2026-05-29
+
+### Changed
+- **Webhook IP allowlist** now accepts `auto` and explicit IPs **together** (e.g. `auto, 192.168.0.175`). Previously it was one mode or the other, so adding an admin/test host meant losing automatic camera detection.
+
+### Added
+- The control endpoint (`/reolox/cmd/…`) always trusts loopback (`127.0.0.1` / `::1`), so it can be tested with `curl` from the ioBroker host without widening the allowlist.
+
 ## [2.3.0] — 2026-05-28
 
 ### Added

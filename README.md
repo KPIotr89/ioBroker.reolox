@@ -37,7 +37,7 @@ ReoLox connects every Reolink camera and NVR on your LAN to ioBroker and Loxone 
 **Reliability & security**
 - Poll scheduler (jitter · per-task mutex · exponential backoff), deterministically tracked timers, singleflight login, firmware-aware disk capability cache
 - Webhook hardened with IP allowlist + constant-time shared secret + 64 KB body cap; encrypted credentials; credential-free public stream URLs
-- 60 unit + 39 package tests · CI on Linux / macOS / Windows × Node 18 / 20 / 22
+- 62 unit + 39 package tests · CI on Linux / macOS / Windows × Node 18 / 20 / 22
 
 ## Quick start
 
@@ -139,7 +139,7 @@ Either the firmware returns `GetDoorbell -9 not supported` (Doorbell PoE v3.0.0.
 <details>
 <summary><b>Webhook / control returns 403 or 401.</b></summary>
 
-**403** — source IP not allowed. Events accept the camera allowlist (`auto`); control additionally accepts the Miniserver IP. A request from your PC/browser is rejected by design. **401** — missing/wrong shared secret (note: this is the *Webhook* shared secret, not the camera password).
+**403** — source IP not allowed. The allowlist can mix `auto` (camera hosts) with explicit IPs (e.g. `auto, 192.168.0.175`); control additionally accepts the Miniserver IP and always loopback (`127.0.0.1`, handy for `curl` on the host). A request from your PC/browser is rejected unless you add its IP. **401** — missing/wrong shared secret (note: this is the *Webhook* shared secret, not the camera password).
 
 </details>
 
@@ -204,7 +204,7 @@ test/                   # mocha + chai + nock, @iobroker/testing
 
 **Loxone tab:** Enable integration · Miniserver IP · HTTP port (80) · Username/Password (encrypted) · Authentication `Token` (recommended) or `Basic` · Communication mode `HTTP` / `UDP` / both · UDP port (7000) · Virtual Input prefix (`ReoLox`) · Enable Loxone Intercom (RTSP URL to `<prefix>_<camera>_intercom` on ring).
 
-**Webhook tab:** Enable server · Listen port (7777) · ioBroker IP (used to auto-configure each camera's push URL) · Shared secret (encrypted) · Source IP allowlist (`auto` = camera hosts, or explicit comma list) · **Allow Loxone control commands** (default on).
+**Webhook tab:** Enable server · Listen port (7777) · ioBroker IP (used to auto-configure each camera's push URL) · Shared secret (encrypted) · Source IP allowlist (`auto`, explicit IPs, or both — `auto, 192.168.0.175`) · **Allow Loxone control commands** (default on).
 
 **Request validation order:** method → path under `/reolox/` → source IP in allowlist → shared secret (constant-time) → body ≤ 64 KB (else `413`). The `/reolox/cmd/…` control route additionally accepts the Miniserver IP and `GET`.
 

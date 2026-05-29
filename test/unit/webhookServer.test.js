@@ -189,15 +189,28 @@ describe('WebhookServer', () => {
         await srv.stop();
     });
 
-    it('control: 403 when source IP not allowed', async () => {
-        const { srv, port } = await startOnFreePort({
-            ipAllowlist: ['10.0.0.1'],
-            onEvent: () => {},
-            onControl: () => {},
-        });
-        const res = await get(port, '/reolox/cmd/taras.control.whiteLed/1');
-        expect(res.status).to.equal(403);
-        await srv.stop();
+    it('_ipAllowed combines auto (camera hosts) with explicit IPs', () => {
+        const srv = new WebhookServer({ log: silentLog, port: 0, ipAllowlist: ['192.168.0.175'], ipAllowlistAuto: true });
+        srv.setCameras({ front: { host: '192.168.0.48' } });
+        expect(srv._ipAllowed('192.168.0.48')).to.equal(true);    // auto (camera host)
+        expect(srv._ipAllowed('192.168.0.175')).to.equal(true);   // explicit extra
+        expect(srv._ipAllowed('8.8.8.8')).to.equal(false);        // neither
+    });
+
+    it('_ipAllowed honours a bare "auto" string (back-compat)', () => {
+        const srv = new WebhookServer({ log: silentLog, port: 0, ipAllowlist: 'auto' });
+        srv.setCameras({ front: { host: '192.168.0.48' } });
+        expect(srv._ipAllowed('192.168.0.48')).to.equal(true);
+        expect(srv._ipAllowed('192.168.0.175')).to.equal(false);
+    });
+
+    it('_ipAllowedForControl always allows loopback, plus extraAllowed', () => {
+        const srv = new WebhookServer({ log: silentLog, port: 0, ipAllowlist: ['10.0.0.1'], extraAllowed: ['192.168.0.2'] });
+        expect(srv._ipAllowedForControl('127.0.0.1')).to.equal(true);   // loopback always
+        expect(srv._ipAllowedForControl('::1')).to.equal(true);
+        expect(srv._ipAllowedForControl('192.168.0.2')).to.equal(true); // extraAllowed (Loxone)
+        expect(srv._ipAllowedForControl('10.0.0.1')).to.equal(true);    // event allowlist
+        expect(srv._ipAllowedForControl('8.8.8.8')).to.equal(false);    // untrusted
     });
 
     it('control: 403 rejects non-control paths', async () => {

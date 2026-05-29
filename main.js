@@ -950,16 +950,19 @@ class ReoLoxAdapter extends utils.Adapter {
     // ─── WEBHOOK ──────────────────────────────────────────────────────────
 
     async _startWebhookServer() {
-        const allowlistRaw = this.config.webhookIpAllowlist || 'auto';
-        const allowlist = allowlistRaw === 'auto'
-            ? 'auto'
-            : String(allowlistRaw).split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+        // The allowlist may mix `auto` (derive camera hosts) with explicit IPs, e.g.
+        // "auto, 192.168.0.175" — both are honoured. Empty defaults to auto.
+        const tokens = String(this.config.webhookIpAllowlist || 'auto')
+            .split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+        const allowAuto = tokens.length === 0 || tokens.some((t) => t.toLowerCase() === 'auto');
+        const explicitIps = tokens.filter((t) => t.toLowerCase() !== 'auto');
 
         this.webhookServer = new WebhookServer({
             port: this.config.webhookPort,
             host: '0.0.0.0',
             sharedSecret: this.config.webhookSharedSecret || '',
-            ipAllowlist: allowlist,
+            ipAllowlist: explicitIps,
+            ipAllowlistAuto: allowAuto,
             pathPrefix: '/reolox',
             log: this.log,
             onEvent: (camId, sourceIp, events) => this._dispatchWebhook(camId, sourceIp, events),
