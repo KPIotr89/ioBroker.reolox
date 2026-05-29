@@ -1,6 +1,6 @@
 {
     "name": "iobroker.reolox",
-    "version": "2.5.0",
+    "version": "2.5.1",
     "description": "ReoLox — Reolink camera bridge for ioBroker with first-class Loxone Miniserver integration",
     "author": {
         "name": "Piotr Kalbarczyk",

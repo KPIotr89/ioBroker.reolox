@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.5.0",
+        "version": "2.5.1",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -75,6 +75,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.5.1": {
+                "en": "Loxone tab: the VI and VO list tables get an Export button (save the list to a file) and a step-by-step guide each — for creating the Virtual Inputs and the Virtual Output in Loxone Config.",
+                "de": "Loxone-Tab: VI- und VO-Listen haben jetzt einen Export-Button (Liste in Datei speichern) und je eine Schritt-fuer-Schritt-Anleitung zum Anlegen der Virtual Inputs und des Virtual Output in Loxone Config.",
+                "pl": "Zakladka Loxone: tabele list VI i VO maja teraz przycisk Export (zapis listy do pliku) oraz instrukcje krok po kroku — tworzenie Virtual Inputs i Virtual Output w Loxone Config."
+            },
             "2.5.0": {
                 "en": "Admin Loxone tab: new ‘Generate VO list’ (Virtual Output commands for /reolox/cmd) and ‘Generate VO import XML’ (ready-to-import Loxone Virtual Output template for your cameras, in a copyable field). VI list table tidied for readability. Fix: removed an invalid jsonConfig property (noAdd) the admin schema rejected.",
                 "de": "Admin Loxone-Tab: neu ‘Generate VO list’ (Virtual-Output-Befehle fuer /reolox/cmd) und ‘Generate VO import XML’ (importfertige Loxone-Virtual-Output-Vorlage fuer deine Kameras, in einem kopierbaren Feld). VI-Tabelle aufgeraeumt. Fix: ungueltige jsonConfig-Eigenschaft (noAdd) entfernt.",
