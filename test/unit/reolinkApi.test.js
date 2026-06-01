@@ -169,4 +169,20 @@ describe('ReolinkAPI', () => {
         expect(setBody[0].param.Audio.enable).to.equal(1);
         expect(setBody[0].param.Audio.schedule.table.MD).to.equal('111'); // schedule preserved
     });
+
+    it('setAudioAlarmConfig reads then writes under the Audio key (not AudioAlarmV20)', async () => {
+        nock('http://1.2.3.4:80').persist().post(/\/cgi-bin\/api\.cgi.*cmd=Login/)
+            .reply(200, [{ code: 0, value: { Token: { name: 'T', leaseTime: 3600 } } }]);
+        nock('http://1.2.3.4:80').persist().post(/\/cgi-bin\/api\.cgi.*cmd=GetAudioAlarmV20/)
+            .reply(200, [{ cmd: 'GetAudioAlarmV20', code: 0, value: { Audio: { enable: 1, schedule: { channel: 0, table: { MD: '111' } } } } }]);
+        let setBody;
+        nock('http://1.2.3.4:80').persist().post(/\/cgi-bin\/api\.cgi.*cmd=SetAudioAlarmV20/)
+            .reply((uri, reqBody) => { setBody = reqBody; return [200, [{ cmd: 'SetAudioAlarmV20', code: 0, value: { rspCode: 200 } }]]; });
+        const api = new ReolinkAPI({ host: '1.2.3.4', username: 'u', password: 'p', log: silentLog });
+        await api.setAudioAlarmConfig(0, { sound: 2 });
+        expect(setBody[0].param.Audio).to.be.an('object');         // correct wrapper key
+        expect(setBody[0].param.AudioAlarmV20).to.equal(undefined); // old (wrong) key gone
+        expect(setBody[0].param.Audio.sound_index).to.equal(2);
+        expect(setBody[0].param.Audio.schedule.table.MD).to.equal('111'); // existing config preserved
+    });
 });

@@ -156,6 +156,9 @@ class ReoLoxAdapter extends utils.Adapter {
             await Promise.allSettled(logouts);
             this.cameras.clear();
 
+            // Stop any held-siren re-fire loops (last pulse rings out within ~2.5 s — fail-safe, never latched).
+            for (const camId of Array.from(this.sirenLoops.keys())) this._stopSirenHold(camId);
+
             if (this.loxoneBridge) this.loxoneBridge.destroy();
             this.timers.dispose();
 
@@ -537,6 +540,8 @@ class ReoLoxAdapter extends utils.Adapter {
                 const r = await api.getAudioAlarmState(ch);
                 const cfg = (r && (r.Audio || r.AudioAlarmV20)) || {};
                 await this.setStateAsync(`${camId}.control.sirenOnDetect`, !!cfg.enable, true);
+                // Held-siren loop never survives a restart — reflect the real (stopped) state so the switch isn't stale.
+                await this.setStateAsync(`${camId}.control.sirenManual`, false, true);
                 if (cfg.duration !== undefined) await this.setStateAsync(`${camId}.control.audioAlarmDuration`, Number(cfg.duration), true);
                 if (cfg.sound_index !== undefined) await this.setStateAsync(`${camId}.control.audioAlarmSound`, Number(cfg.sound_index), true);
             } catch (_) { /* skip */ }
@@ -1274,8 +1279,9 @@ class ReoLoxAdapter extends utils.Adapter {
                     catch (e) { this.log.warn(`Camera "${camId}" setMdSensitivity failed: ${sanitize(e.message)}`); }
                     break;
                 case 'control.audioAlarmDuration':
-                    try { await api.setAudioAlarmConfig(ch, { duration: Number(state.val) }); await this.setStateAsync(id, Number(state.val), true); }
-                    catch (e) { this.log.warn(`Camera "${camId}" setAudioAlarmConfig duration failed: ${sanitize(e.message)}`); }
+                    // Local repeat-count for the timed-pulse siren (read at trigger time by control.siren).
+                    // Not a camera-side config write — current firmware has no settable duration field.
+                    await this.setStateAsync(id, Number(state.val), true);
                     break;
                 case 'control.audioAlarmSound':
                     try { await api.setAudioAlarmConfig(ch, { sound: Number(state.val) }); await this.setStateAsync(id, Number(state.val), true); }

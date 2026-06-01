@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.5.6",
+        "version": "2.5.7",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -75,6 +75,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.5.7": {
+                "en": "Pre-production hardening (independent code review): SetAudioAlarmV20 now writes under the correct 'Audio' key, so audio-alarm sound/duration setters actually take effect. Held-siren re-fire loops are stopped on adapter unload and sirenManual is reset to OFF on restart (no stale switch, siren never auto-resumes). audioAlarmDuration is now a pure local pulse-repeat counter. No functional regressions; 67 unit + 39 package tests pass.",
+                "de": "Haertung vor Produktiveinsatz (unabhaengiges Code-Review): SetAudioAlarmV20 schreibt jetzt unter dem korrekten 'Audio'-Schluessel, daher wirken Sound/Dauer der Audio-Alarm-Setter tatsaechlich. Held-Sirenen-Schleifen werden beim Unload gestoppt und sirenManual beim Neustart auf AUS gesetzt (kein veralteter Schalter, keine automatische Wiederaufnahme). audioAlarmDuration ist nun ein reiner lokaler Impuls-Wiederholungszaehler. Keine funktionalen Regressionen; 67 Unit- + 39 Paket-Tests bestehen.",
+                "pl": "Utwardzenie przed wdrozeniem (niezalezna recenzja kodu): SetAudioAlarmV20 zapisuje teraz pod poprawnym kluczem 'Audio', wiec ustawienia dzwieku/czasu alarmu audio faktycznie dzialaja. Petle podtrzymania syreny sa zatrzymywane przy wyladowaniu adaptera, a sirenManual resetowany do OFF po restarcie (brak nieaktualnego przelacznika, syrena nie wznawia sie sama). audioAlarmDuration to teraz czysty lokalny licznik powtorzen impulsu. Brak regresji funkcjonalnych; 67 testow unit + 39 pakietowych przechodzi."
+            },
             "2.5.6": {
                 "en": "Doorbell: merged the redundant visitor/doorbell signals into one. On Doorbell PoE the button press arrives as a 'visitor' webhook, so status.doorbellRing and the <cam>_doorbellRing VI were duplicates of visitorDetected / <cam>_Visitor — now removed. Use <cam>_Visitor (and status.visitorDetected). The 20 s before a new ring registers is the camera's push debounce, not the adapter.",
                 "de": "Tuerklingel: redundante visitor/doorbell-Signale zu einem zusammengefuehrt. Bei Doorbell PoE kommt der Tastendruck als 'visitor'-Webhook, daher waren status.doorbellRing und <cam>_doorbellRing Duplikate von visitorDetected / <cam>_Visitor — jetzt entfernt. Nutze <cam>_Visitor. Die 20 s bis zum naechsten Klingeln sind die Push-Sperre der Kamera, nicht des Adapters.",

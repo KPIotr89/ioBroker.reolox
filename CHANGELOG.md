@@ -2,6 +2,18 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.7] — 2026-06-01
+
+Pre-production hardening pass following an independent adversarial code review. No new features, no functional regressions — `67` unit + `39` package tests pass, lint clean.
+
+### Fixed
+- **`SetAudioAlarmV20` wrote under the wrong wrapper key.** `setAudioAlarm` / `setAudioAlarmConfig` sent the config under `AudioAlarmV20`, but the camera returns (and expects) it under `Audio` — so on firmware that supports a settable alarm sound/duration those writes silently failed. Both setters now use the `Audio` key (matching the already-correct `setAudioAlarmEnabled`). Added a regression test.
+- **Held-siren re-fire loops are now stopped on adapter unload.** `onUnload` explicitly stops every active siren-hold loop before disposing timers; the last 1-repeat pulse rings out within ~2.5 s (fail-safe — the siren can never latch on across a restart).
+- **`control.sirenManual` is reset to OFF on every (re)start.** The software-held loop never survives a restart, so the switch is forced to `false` during initial state sync — no stale "ON" that isn't actually wailing, and the siren never auto-resumes after a restart.
+
+### Changed
+- **`control.audioAlarmDuration` is now a pure local value** (the repeat-count read by the timed-pulse siren at trigger time) and no longer attempts a camera-side config write — current CX-series firmware has no settable duration field, so the write only produced a spurious warning.
+
 ## [2.5.6] — 2026-05-29
 
 ### Changed
