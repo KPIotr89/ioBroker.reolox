@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.5.8",
+        "version": "2.5.9",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -76,6 +76,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.5.9": {
+                "en": "Fix SIGKILL on stop/restart for real. onUnload now releases the held siren first, then disposes timers, and caps webhook-stop (300 ms) and per-camera logout (500 ms) so callback() fires well under js-controller's ~1 s stop timeout — with several cameras the old 2 s logout wait was killed mid-shutdown (so the 2.5.7 siren-stop never ran). stopTimeout stays as a backstop. Verified with 6 cameras incl. a doorbell.",
+                "de": "SIGKILL beim Stop/Neustart wirklich behoben. onUnload gibt jetzt zuerst die gehaltene Sirene frei, verwirft dann Timer und begrenzt Webhook-Stop (300 ms) und Kamera-Logout (500 ms), damit callback() deutlich unter dem ~1-s-Stop-Timeout des js-controllers feuert — bei mehreren Kameras wurde das alte 2-s-Logout mitten im Shutdown beendet. stopTimeout bleibt als Absicherung. Mit 6 Kameras inkl. Türklingel verifiziert.",
+                "pl": "Realne usunięcie SIGKILL przy stop/restart. onUnload najpierw zwalnia podtrzymaną syrenę, potem kasuje timery i ogranicza zatrzymanie webhooka (300 ms) oraz wylogowanie kamer (500 ms), aby callback() zdążył grubo poniżej ~1 s limitu js-controllera — przy kilku kamerach stare 2 s wylogowania było ubijane w trakcie zamykania (więc stop syreny z 2.5.7 się nie wykonywał). stopTimeout zostaje jako zabezpieczenie. Zweryfikowane na 6 kamerach z dzwonkiem."
+            },
             "2.5.8": {
                 "en": "Graceful shutdown: added stopTimeout (4 s) so onUnload finishes before js-controller force-kills the instance. Previously a restart hit the 1 s default and the adapter was SIGKILLed mid-logout, so the 2.5.7 siren-stop-on-unload could not run. Now camera logout and held-siren stop complete cleanly on stop/restart.",
                 "de": "Sauberes Herunterfahren: stopTimeout (4 s) ergänzt, damit onUnload abschließt, bevor js-controller die Instanz hart beendet. Zuvor griff beim Neustart das 1-s-Standardlimit und der Adapter wurde mitten im Logout per SIGKILL beendet, sodass der Sirenen-Stop aus 2.5.7 nicht lief. Jetzt werden Kamera-Logout und Sirenen-Stop bei Stop/Neustart sauber abgeschlossen.",

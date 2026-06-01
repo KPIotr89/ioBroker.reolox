@@ -2,6 +2,11 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.9] — 2026-06-01
+
+### Fixed
+- **SIGKILL on stop/restart — fixed properly in code.** `common.stopTimeout` (added in 2.5.8) was not honoured by the existing instance object, so restarts still hit the ~1 s default and the adapter was force-killed mid-shutdown — confirmed live with 6 cameras (the 2 s parallel logout wait never finished in time, so the 2.5.7 held-siren stop never ran). `onUnload` is restructured to finish well under 1 s regardless of js-controller settings: it now (1) releases the held siren **first**, before any `await` or `timers.dispose()`; (2) disposes scheduler/bridge/timers; (3) caps webhook-stop at 300 ms and each camera logout at 500 ms. Leftover HTTP sockets / camera sessions are reclaimed by the OS or time out server-side. `stopTimeout = 4000` stays as a backstop for fresh installs.
+
 ## [2.5.8] — 2026-06-01
 
 ### Fixed

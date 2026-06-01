@@ -145,22 +145,31 @@ class ReoLoxAdapter extends utils.Adapter {
 
     async onUnload(callback) {
         try {
-            if (this.scheduler) this.scheduler.dispose();
-            if (this.webhookServer) await this.webhookServer.stop().catch(() => undefined);
+            // Safety-first: release any held siren immediately, before any await or
+            // timers.dispose(), so the re-fire loop is stopped even if the rest of
+            // unload is cut short. Last pulse rings out within ~2.5 s — never latched.
+            for (const camId of Array.from(this.sirenLoops.keys())) this._stopSirenHold(camId);
 
-            // Logout in parallel with a short cap so unload finishes promptly.
+            if (this.scheduler) this.scheduler.dispose();
+            if (this.loxoneBridge) this.loxoneBridge.destroy();
+            this.timers.dispose();
+
+            // Tight caps so callback() fires well under js-controller's ~1 s stop timeout —
+            // otherwise the instance is SIGKILLed before unload completes (seen with several
+            // cameras). Anything left (HTTP socket, camera session) is reclaimed by the OS or
+            // times out server-side, so it is not worth blocking shutdown on.
+            if (this.webhookServer) {
+                await Promise.race([
+                    this.webhookServer.stop().catch(() => undefined),
+                    new Promise((r) => setTimeout(r, 300)),
+                ]);
+            }
             const logouts = Array.from(this.cameras.values()).map((api) => Promise.race([
                 api.logout().catch(() => undefined),
-                new Promise((r) => setTimeout(r, 2000)),
+                new Promise((r) => setTimeout(r, 500)),
             ]));
             await Promise.allSettled(logouts);
             this.cameras.clear();
-
-            // Stop any held-siren re-fire loops (last pulse rings out within ~2.5 s — fail-safe, never latched).
-            for (const camId of Array.from(this.sirenLoops.keys())) this._stopSirenHold(camId);
-
-            if (this.loxoneBridge) this.loxoneBridge.destroy();
-            this.timers.dispose();
 
             callback();
         } catch (e) {
