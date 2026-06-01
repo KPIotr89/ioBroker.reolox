@@ -2,6 +2,11 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.8] — 2026-06-01
+
+### Fixed
+- **Graceful shutdown — adapter was SIGKILLed on restart.** Real-world restart logs showed js-controller force-killing the instance after its 1 s default stop timeout, while `onUnload` (camera logout, capped at 2 s, plus the 2.5.7 held-siren stop) needs longer. As a result the 2.5.7 clean-up code never ran on a controlled restart. Added `common.stopTimeout = 4000` (ms) so `onUnload` completes — camera logout and the held-siren stop now finish cleanly on stop/restart. io-package.json-only change; no code logic touched.
+
 ## [2.5.7] — 2026-06-01
 
 Pre-production hardening pass following an independent adversarial code review. No new features, no functional regressions — `67` unit + `39` package tests pass, lint clean.

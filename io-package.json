@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.5.7",
+        "version": "2.5.8",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -41,6 +41,7 @@
         "mode": "daemon",
         "type": "multimedia",
         "compact": true,
+        "stopTimeout": 4000,
         "connectionType": "local",
         "dataSource": "push",
         "adminUI": {
@@ -75,6 +76,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.5.8": {
+                "en": "Graceful shutdown: added stopTimeout (4 s) so onUnload finishes before js-controller force-kills the instance. Previously a restart hit the 1 s default and the adapter was SIGKILLed mid-logout, so the 2.5.7 siren-stop-on-unload could not run. Now camera logout and held-siren stop complete cleanly on stop/restart.",
+                "de": "Sauberes Herunterfahren: stopTimeout (4 s) ergänzt, damit onUnload abschließt, bevor js-controller die Instanz hart beendet. Zuvor griff beim Neustart das 1-s-Standardlimit und der Adapter wurde mitten im Logout per SIGKILL beendet, sodass der Sirenen-Stop aus 2.5.7 nicht lief. Jetzt werden Kamera-Logout und Sirenen-Stop bei Stop/Neustart sauber abgeschlossen.",
+                "pl": "Czyste zamykanie: dodano stopTimeout (4 s), aby onUnload zdążył się zakończyć zanim js-controller siłą ubije instancję. Wcześniej restart trafiał w domyślny limit 1 s i adapter dostawał SIGKILL w trakcie wylogowania, więc stop syreny z 2.5.7 się nie wykonywał. Teraz wylogowanie kamer i zatrzymanie syreny kończą się czysto przy stop/restart."
+            },
             "2.5.7": {
                 "en": "Pre-production hardening (independent code review): SetAudioAlarmV20 now writes under the correct 'Audio' key, so audio-alarm sound/duration setters actually take effect. Held-siren re-fire loops are stopped on adapter unload and sirenManual is reset to OFF on restart (no stale switch, siren never auto-resumes). audioAlarmDuration is now a pure local pulse-repeat counter. No functional regressions; 67 unit + 39 package tests pass.",
                 "de": "Haertung vor Produktiveinsatz (unabhaengiges Code-Review): SetAudioAlarmV20 schreibt jetzt unter dem korrekten 'Audio'-Schluessel, daher wirken Sound/Dauer der Audio-Alarm-Setter tatsaechlich. Held-Sirenen-Schleifen werden beim Unload gestoppt und sirenManual beim Neustart auf AUS gesetzt (kein veralteter Schalter, keine automatische Wiederaufnahme). audioAlarmDuration ist nun ein reiner lokaler Impuls-Wiederholungszaehler. Keine funktionalen Regressionen; 67 Unit- + 39 Paket-Tests bestehen.",
