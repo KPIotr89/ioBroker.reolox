@@ -1,23 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0071e3"/>
-      <stop offset="1" stop-color="#003d8f"/>
-    </linearGradient>
-  </defs>
-  <rect width="128" height="128" rx="22" fill="url(#bg)"/>
-  <g transform="translate(64 64)" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Camera body -->
-    <rect x="-34" y="-14" width="58" height="34" rx="6" fill="rgba(255,255,255,0.08)"/>
-    <!-- Lens -->
-    <circle cx="-5" cy="3" r="13"/>
-    <circle cx="-5" cy="3" r="6" fill="#fff" stroke="none"/>
-    <!-- Status LED -->
-    <circle cx="18" cy="-6" r="3" fill="#34d058" stroke="none"/>
-    <!-- House (Loxone hint) -->
-    <path d="M30 22 L42 10 L54 22 L54 32 L30 32 Z"/>
-    <path d="M40 32 L40 24 L44 24 L44 32"/>
-  </g>
-  <text x="64" y="118" text-anchor="middle" fill="#fff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="600" letter-spacing="2">ReoLox</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#004FDD"></stop><stop offset="0.45" stop-color="#004FDD"></stop><stop offset="0.55" stop-color="#56B83B"></stop><stop offset="1" stop-color="#56B83B"></stop></linearGradient>
+<linearGradient id="bd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#56B83B"></stop><stop offset="0.45" stop-color="#56B83B"></stop><stop offset="0.55" stop-color="#004FDD"></stop><stop offset="1" stop-color="#004FDD"></stop></linearGradient>
+</defs>
+<rect x="0" y="0" width="100" height="100" rx="26" fill="url(#bg)"></rect>
+<rect x="3.4" y="3.4" width="93.2" height="93.2" rx="22.6" fill="none" stroke="url(#bd)" stroke-width="5.6"></rect>
+<g transform="translate(19.03 15.88) scale(0.42)" fill="#fff"><path d="M0 0 L0 72 L14 72 L14 46 L28 46 L44 72 L60 72 L42 43 C52 39 57 31 57 22 C57 9 47 0 31 0 Z M14 12 L30 12 C38 12 43 16 43 23 C43 30 38 34 30 34 L14 34 Z"></path></g>
+<g transform="translate(58.03 53.88) scale(0.42)" fill="#fff"><path d="M0 0 L0 72 L46 72 L46 59 L14 59 L14 0 Z"></path></g>
 </svg>

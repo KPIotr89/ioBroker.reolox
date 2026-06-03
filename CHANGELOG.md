@@ -2,6 +2,14 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.10] — 2026-06-01
+
+### Fixed
+- **SIGKILL on every stop/restart — root cause found and fixed.** Live testing (6 cameras + an RLN8-410 NVR) showed the instance force-killed at js-controller's 1 s stop timeout *even when fully initialised* — and `common.stopTimeout` (2.5.8) was written to the instance object yet ignored. Real cause: the adapter ran in **compact mode** (`compact: true`), where adapter-core deliberately does **not** call `process.exit()` after `onUnload`; the lone reolox process was then kept alive by lingering camera/NVR HTTP sockets past the 1 s window and SIGKILLed. Fix: **disabled compact mode** (the adapter now runs as its own subprocess, so adapter-core owns the full lifecycle) and `onUnload` now forces a prompt clean exit (`process.exit(0)` after a 200 ms unref'd delay) in standalone mode. `stopTimeout = 4000` stays as a harmless backstop. No change to camera or Loxone behaviour.
+
+### Changed
+- **New project logo.** R/L mark — blue = Reolink, green = Loxone — supplied as a font-independent vector (`admin/reolox.svg`, letters as paths, brand colours `#004FDD` / `#56B83B`) with a matching 256×256 `admin/reolox.png`. Replaces the previous placeholder icon.
+
 ## [2.5.9] — 2026-06-01
 
 ### Fixed

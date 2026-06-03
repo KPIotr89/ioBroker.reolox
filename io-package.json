@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "reolox",
-        "version": "2.5.9",
+        "version": "2.5.10",
         "title": "ReoLox",
         "titleLang": {
             "en": "ReoLox — Reolink ↔ Loxone bridge",
@@ -40,7 +40,7 @@
         "tier": 3,
         "mode": "daemon",
         "type": "multimedia",
-        "compact": true,
+        "compact": false,
         "stopTimeout": 4000,
         "connectionType": "local",
         "dataSource": "push",
@@ -76,6 +76,11 @@
         },
         "messagebox": true,
         "news": {
+            "2.5.10": {
+                "en": "Definitive fix for SIGKILL on stop/restart. Root cause: in compact mode adapter-core does not process.exit() after onUnload, and lingering camera/NVR HTTP sockets kept the lone reolox process alive past js-controller's 1 s stop window, so it was force-killed every time (stopTimeout was ignored). Compact mode is now disabled (own subprocess) and onUnload forces a prompt clean exit in standalone mode. Verified with 6 cameras + RLN8-410 NVR. No functional change to camera/Loxone behaviour.",
+                "de": "Endgültige Behebung des SIGKILL bei Stop/Neustart. Ursache: im Compact-Modus ruft adapter-core nach onUnload kein process.exit() auf, und verbleibende Kamera-/NVR-HTTP-Sockets hielten den einzelnen reolox-Prozess über das 1-s-Stopfenster des js-controllers hinaus am Leben. Compact-Modus ist nun deaktiviert (eigener Subprozess) und onUnload erzwingt im Standalone-Modus einen sofortigen sauberen Exit. Mit 6 Kameras + RLN8-410 verifiziert.",
+                "pl": "Ostateczna naprawa SIGKILL przy stop/restart. Przyczyna: w trybie compact adapter-core po onUnload nie woła process.exit(), a wiszące gniazda HTTP kamer/NVR trzymały samotny proces reolox przy życiu dłużej niż 1 s okno stopu js-controllera — stąd ubijanie za każdym razem (stopTimeout był ignorowany). Compact wyłączony (własny subproces), a onUnload w trybie standalone wymusza natychmiastowe czyste wyjście. Zweryfikowane na 6 kamerach + NVR RLN8-410. Bez zmian w działaniu kamer/Loxone."
+            },
             "2.5.9": {
                 "en": "Fix SIGKILL on stop/restart for real. onUnload now releases the held siren first, then disposes timers, and caps webhook-stop (300 ms) and per-camera logout (500 ms) so callback() fires well under js-controller's ~1 s stop timeout — with several cameras the old 2 s logout wait was killed mid-shutdown (so the 2.5.7 siren-stop never ran). stopTimeout stays as a backstop. Verified with 6 cameras incl. a doorbell.",
                 "de": "SIGKILL beim Stop/Neustart wirklich behoben. onUnload gibt jetzt zuerst die gehaltene Sirene frei, verwirft dann Timer und begrenzt Webhook-Stop (300 ms) und Kamera-Logout (500 ms), damit callback() deutlich unter dem ~1-s-Stop-Timeout des js-controllers feuert — bei mehreren Kameras wurde das alte 2-s-Logout mitten im Shutdown beendet. stopTimeout bleibt als Absicherung. Mit 6 Kameras inkl. Türklingel verifiziert.",

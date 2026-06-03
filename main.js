@@ -170,11 +170,19 @@ class ReoLoxAdapter extends utils.Adapter {
             ]));
             await Promise.allSettled(logouts);
             this.cameras.clear();
-
-            callback();
         } catch (e) {
             this.log.debug(`Unload error: ${sanitize(e.message)}`);
+        } finally {
             callback();
+            // Camera/NVR HTTP sockets and any in-flight poll requests can keep the Node
+            // event loop alive past js-controller's ~1 s stop window, which then SIGKILLs
+            // the instance. Once unload has signalled completion, force a prompt clean exit.
+            // Standalone mode only — in compact mode this would take down sibling adapters
+            // (the adapter ships with compact disabled, so this path is the normal one).
+            if (!this.startedInCompactMode) {
+                // eslint-disable-next-line no-process-exit
+                setTimeout(() => process.exit(0), 200).unref();
+            }
         }
     }
 
